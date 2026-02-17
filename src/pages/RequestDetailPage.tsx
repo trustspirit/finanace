@@ -42,6 +42,8 @@ export default function RequestDetailPage() {
           <div><span className="text-gray-500">날짜:</span> {request.date}</div>
           <div><span className="text-gray-500">전화번호:</span> {request.phone}</div>
           <div><span className="text-gray-500">세션:</span> {request.session}</div>
+          <div><span className="text-gray-500">은행 / 계좌:</span> {request.bankName} {request.bankAccount}</div>
+          <div><span className="text-gray-500">위원회:</span> {request.committee === 'operations' ? '운영 위원회' : '준비 위원회'}</div>
         </div>
 
         <table className="w-full text-sm mb-6">
@@ -101,6 +103,15 @@ export default function RequestDetailPage() {
             {request.approvedBy ? `${request.approvedBy.name} (${request.approvedBy.email})` : '-'}
           </div>
         </div>
+
+        {request.approvalSignature && (
+          <div className="mt-4 pt-4 border-t">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">승인 서명</h3>
+            <div className="border border-gray-200 rounded p-2 bg-gray-50 inline-block">
+              <img src={request.approvalSignature} alt="승인 서명" className="max-h-20" />
+            </div>
+          </div>
+        )}
 
         <div className="mt-6">
           <Link to="/my-requests" className="text-sm text-blue-600 hover:underline">← 목록으로</Link>

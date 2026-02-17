@@ -15,14 +15,19 @@ export default function MyRequestsPage() {
   useEffect(() => {
     if (!user) return
     const fetchRequests = async () => {
-      const q = query(
-        collection(db, 'requests'),
-        where('requestedBy.uid', '==', user.uid),
-        orderBy('createdAt', 'desc')
-      )
-      const snap = await getDocs(q)
-      setRequests(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as PaymentRequest)))
-      setLoading(false)
+      try {
+        const q = query(
+          collection(db, 'requests'),
+          where('requestedBy.uid', '==', user.uid),
+          orderBy('createdAt', 'desc')
+        )
+        const snap = await getDocs(q)
+        setRequests(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as PaymentRequest)))
+      } catch (error) {
+        console.error('Failed to fetch requests:', error)
+      } finally {
+        setLoading(false)
+      }
     }
     fetchRequests()
   }, [user])

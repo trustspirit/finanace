@@ -1,3 +1,13 @@
+export const BUDGET_CODE_LABELS: Record<number, string> = {
+  5862: 'Lodging/Facilities',
+  5110: 'Transportation',
+  5400: 'Food/Insurance/Admin',
+  5200: 'Materials/Supplies',
+  4500: 'Participation Fee',
+}
+
+export const UNIQUE_BUDGET_CODES = [5862, 5110, 5400, 5200, 4500] as const
+
 export interface BudgetCodeOption {
   code: number
   category: string

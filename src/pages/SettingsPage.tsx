@@ -1,0 +1,132 @@
+import { useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
+import { Committee } from '../types'
+import Layout from '../components/Layout'
+import SignaturePad from '../components/SignaturePad'
+
+function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length <= 3) return digits
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+}
+
+export default function SettingsPage() {
+  const { appUser, updateAppUser } = useAuth()
+  const [displayName, setDisplayName] = useState(appUser?.displayName || '')
+  const [phone, setPhone] = useState(appUser?.phone || '')
+  const [bankName, setBankName] = useState(appUser?.bankName || '')
+  const [bankAccount, setBankAccount] = useState(appUser?.bankAccount || '')
+  const [defaultCommittee, setDefaultCommittee] = useState<Committee>(appUser?.defaultCommittee || 'operations')
+  const [signature, setSignature] = useState(appUser?.signature || '')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  const handleSave = async () => {
+    if (!displayName.trim()) {
+      alert('선호하는 이름을 입력해주세요.')
+      return
+    }
+    setSaving(true)
+    setSaved(false)
+    try {
+      await updateAppUser({
+        displayName: displayName.trim(),
+        phone: phone.trim(),
+        bankName: bankName.trim(),
+        bankAccount: bankAccount.trim(),
+        defaultCommittee,
+        signature,
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (error) {
+      console.error('Failed to save settings:', error)
+      alert('저장에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Layout>
+      <div className="bg-white rounded-lg shadow p-6 max-w-lg mx-auto">
+        <h2 className="text-xl font-bold mb-6">설정</h2>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Google 계정 이름</label>
+          <input type="text" readOnly value={appUser?.name || ''}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-gray-100 text-gray-500" />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+          <input type="text" readOnly value={appUser?.email || ''}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-gray-100 text-gray-500" />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            선호하는 이름 <span className="text-red-500">*</span>
+          </label>
+          <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="화면에 표시될 이름"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          <p className="text-xs text-gray-400 mt-1">신청서 및 화면에 이 이름이 표시됩니다.</p>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
+          <input type="tel" value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))}
+            placeholder="010-0000-0000"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">은행</label>
+          <input type="text" value={bankName} onChange={(e) => setBankName(e.target.value)}
+            placeholder="예: 국민은행"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">계좌번호</label>
+          <input type="text" value={bankAccount} onChange={(e) => setBankAccount(e.target.value)}
+            placeholder="예: 123-456-789012"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">기본 위원회</label>
+          <div className="flex gap-4 mt-1">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="default-committee" value="operations"
+                checked={defaultCommittee === 'operations'} onChange={() => setDefaultCommittee('operations')} />
+              <span className="text-sm">운영 위원회</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="default-committee" value="preparation"
+                checked={defaultCommittee === 'preparation'} onChange={() => setDefaultCommittee('preparation')} />
+              <span className="text-sm">준비 위원회</span>
+            </label>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">신청서 작성 시 기본 선택됩니다.</p>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-1">서명</label>
+          <SignaturePad initialData={signature} onChange={setSignature} />
+          <p className="text-xs text-gray-400 mt-1">승인 시 사용될 서명입니다. 저장하면 매번 다시 그리지 않아도 됩니다.</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button onClick={handleSave} disabled={saving}
+            className="bg-blue-600 text-white px-6 py-2 rounded text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400">
+            {saving ? '저장 중...' : '저장'}
+          </button>
+          {saved && <span className="text-sm text-green-600">저장되었습니다.</span>}
+        </div>
+      </div>
+    </Layout>
+  )
+}
