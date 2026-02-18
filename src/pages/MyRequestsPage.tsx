@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useProject } from '../contexts/ProjectContext'
 import { Link } from 'react-router-dom'
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore'
 import { db } from '../lib/firebase'
@@ -14,6 +15,7 @@ import PageHeader from '../components/PageHeader'
 export default function MyRequestsPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
+  const { currentProject } = useProject()
   const [requests, setRequests] = useState<PaymentRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -25,6 +27,7 @@ export default function MyRequestsPage() {
         setError(null)
         const q = query(
           collection(db, 'requests'),
+          where('projectId', '==', currentProject?.id),
           where('requestedBy.uid', '==', user.uid),
           orderBy('createdAt', 'desc')
         )
@@ -38,7 +41,7 @@ export default function MyRequestsPage() {
       }
     }
     fetchRequests()
-  }, [user, t])
+  }, [user, t, currentProject?.id])
 
   return (
     <Layout>

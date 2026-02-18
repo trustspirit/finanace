@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { collection, query, where, getDocs, doc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import { useProject } from '../contexts/ProjectContext'
 import { PaymentRequest } from '../types'
 import { canApproveCommittee } from '../lib/roles'
 import Layout from '../components/Layout'
@@ -12,6 +13,7 @@ import Spinner from '../components/Spinner'
 export default function SettlementPage() {
   const { t } = useTranslation()
   const { user, appUser } = useAuth()
+  const { currentProject } = useProject()
   const role = appUser?.role || 'user'
   const navigate = useNavigate()
   const [requests, setRequests] = useState<PaymentRequest[]>([])
@@ -23,7 +25,7 @@ export default function SettlementPage() {
   useEffect(() => {
     const fetchApproved = async () => {
       try {
-        const q = query(collection(db, 'requests'), where('status', '==', 'approved'))
+        const q = query(collection(db, 'requests'), where('projectId', '==', currentProject?.id), where('status', '==', 'approved'))
         const snap = await getDocs(q)
         const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as PaymentRequest))
         setRequests(all.filter((r) => canApproveCommittee(role, r.committee)))
@@ -34,7 +36,7 @@ export default function SettlementPage() {
       }
     }
     fetchApproved()
-  }, [role])
+  }, [role, currentProject?.id])
 
   const handleRowClick = useCallback((id: string, index: number, e: React.MouseEvent) => {
     if (e.shiftKey && lastClickedIndex !== null) {
@@ -114,6 +116,7 @@ export default function SettlementPage() {
         const settlementRef = doc(collection(db, 'settlements'))
         batch.set(settlementRef, {
           createdAt: serverTimestamp(),
+          projectId: currentProject!.id,
           createdBy: { uid: user.uid, name: creatorName, email: appUser.email },
           payee: first.payee,
           phone: first.phone,

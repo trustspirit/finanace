@@ -1,5 +1,33 @@
 export type UserRole = 'user' | 'approver_ops' | 'approver_prep' | 'finance' | 'admin'
 
+export interface ProjectDriveFolders {
+  operations: string
+  preparation: string
+  bankbook: string
+}
+
+export interface ProjectBudgetConfig {
+  totalBudget: number
+  byCode: Record<number, number>
+}
+
+export interface Project {
+  id: string
+  name: string
+  description: string
+  createdAt: Date
+  createdBy: { uid: string; name: string; email: string }
+  budgetConfig: ProjectBudgetConfig
+  documentNo: string
+  driveFolders: ProjectDriveFolders
+  memberUids: string[]
+  isActive: boolean
+}
+
+export interface GlobalSettings {
+  defaultProjectId: string
+}
+
 export interface AppUser {
   uid: string
   email: string
@@ -14,6 +42,7 @@ export interface AppUser {
   bankBookDriveId: string
   bankBookDriveUrl: string
   role: UserRole
+  projectIds: string[]
 }
 
 export type Committee = 'operations' | 'preparation'
@@ -34,6 +63,7 @@ export interface Receipt {
 
 export interface PaymentRequest {
   id: string
+  projectId: string
   createdAt: Date
   status: RequestStatus
   payee: string
@@ -58,6 +88,7 @@ export interface PaymentRequest {
 
 export interface Settlement {
   id: string
+  projectId: string
   createdAt: Date
   createdBy: { uid: string; name: string; email: string }
   payee: string

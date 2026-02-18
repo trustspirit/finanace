@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'
 import { isStaff, canAccessDashboard, canManageUsers } from '../lib/roles'
+import ProjectSelector from './ProjectSelector'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { appUser, logout } = useAuth()
@@ -31,9 +32,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <nav className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-40">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-between h-14">
-            <Link to="/my-requests" className="font-bold text-lg shrink-0">
-              {t('app.title')}
-            </Link>
+            <div className="flex items-center gap-3 shrink-0">
+              <Link to="/my-requests" className="font-bold text-lg">
+                {t('app.title')}
+              </Link>
+              <ProjectSelector />
+            </div>
 
             {/* Desktop Nav */}
             <div className="hidden lg:flex items-center gap-1">
@@ -102,6 +106,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="lg:hidden border-t border-gray-100 py-2">
+              <div className="px-3 py-2">
+                <ProjectSelector />
+              </div>
               <p className="px-3 py-1 text-xs text-gray-400 uppercase tracking-wider">{t('nav.myRequests')}</p>
               {navItems.map((item) => (
                 <Link key={item.to} to={item.to}

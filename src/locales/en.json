@@ -229,6 +229,24 @@
     "settlementReport": "Settlement Report",
     "viewReport": "View Report"
   },
+  "project": {
+    "title": "Project Management",
+    "name": "Project Name",
+    "description": "Description",
+    "create": "Create Project",
+    "select": "Select Project",
+    "driveFolders": "Google Drive Folder Settings",
+    "operationsFolder": "Session Folder ID",
+    "preparationFolder": "Logistical Folder ID",
+    "bankbookFolder": "Bank Book Folder ID",
+    "driveFolderHint": "Copy the folder ID from the Google Drive folder URL. (e.g., drive.google.com/drive/folders/[this part])",
+    "members": "Members",
+    "setDefault": "Set as Default",
+    "isDefault": "Default Project",
+    "memberCount": "{{count}} members",
+    "personalSettings": "Personal Settings",
+    "projectSettings": "Project Settings"
+  },
   "budgetCode": {
     "select": "Select budget code",
     "5862": "Lodging/Facilities",

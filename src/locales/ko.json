@@ -229,6 +229,24 @@
     "settlementReport": "정산 리포트",
     "viewReport": "리포트 보기"
   },
+  "project": {
+    "title": "프로젝트 관리",
+    "name": "프로젝트 이름",
+    "description": "설명",
+    "create": "프로젝트 생성",
+    "select": "프로젝트 선택",
+    "driveFolders": "Google Drive 폴더 설정",
+    "operationsFolder": "운영위 폴더 ID",
+    "preparationFolder": "준비위 폴더 ID",
+    "bankbookFolder": "통장사본 폴더 ID",
+    "driveFolderHint": "Google Drive 폴더의 URL에서 폴더 ID를 복사하세요. (예: drive.google.com/drive/folders/[이 부분])",
+    "members": "멤버",
+    "setDefault": "기본 프로젝트 설정",
+    "isDefault": "기본 프로젝트",
+    "memberCount": "{{count}}명",
+    "personalSettings": "내 설정",
+    "projectSettings": "프로젝트 설정"
+  },
   "budgetCode": {
     "select": "예산 코드 선택",
     "5862": "숙박/시설",

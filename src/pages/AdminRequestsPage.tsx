@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { collection, query, orderBy, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, query, orderBy, getDocs, doc, updateDoc, serverTimestamp, where } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import { useProject } from '../contexts/ProjectContext'
 import { PaymentRequest, RequestStatus } from '../types'
 import Layout from '../components/Layout'
 import StatusBadge from '../components/StatusBadge'
@@ -16,6 +17,7 @@ import { canApproveCommittee } from '../lib/roles'
 export default function AdminRequestsPage() {
   const { t } = useTranslation()
   const { user, appUser } = useAuth()
+  const { currentProject } = useProject()
   const role = appUser?.role || 'user'
   const [requests, setRequests] = useState<PaymentRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -28,7 +30,11 @@ export default function AdminRequestsPage() {
   useEffect(() => {
     const fetchRequests = async () => {
       try {
-        const q = query(collection(db, 'requests'), orderBy('createdAt', 'desc'))
+        const q = query(
+          collection(db, 'requests'),
+          where('projectId', '==', currentProject?.id),
+          orderBy('createdAt', 'desc')
+        )
         const snap = await getDocs(q)
         setRequests(snap.docs.map((d) => ({ id: d.id, ...d.data() } as PaymentRequest)))
       } catch (error) {
@@ -38,7 +44,7 @@ export default function AdminRequestsPage() {
       }
     }
     fetchRequests()
-  }, [])
+  }, [currentProject?.id])
 
   const handleApproveWithSign = (requestId: string) => {
     const req = requests.find((r) => r.id === requestId)

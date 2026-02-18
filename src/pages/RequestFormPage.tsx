@@ -4,6 +4,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { db, functions } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import { useProject } from '../contexts/ProjectContext'
 import { updateDoc, doc } from 'firebase/firestore'
 import { RequestItem, Receipt, Committee } from '../types'
 import Layout from '../components/Layout'
@@ -51,6 +52,7 @@ function clearDraft() {
 export default function RequestFormPage() {
   const { t } = useTranslation()
   const { user, appUser } = useAuth()
+  const { currentProject } = useProject()
   const navigate = useNavigate()
 
   const draft = loadDraft()
@@ -174,7 +176,7 @@ export default function RequestFormPage() {
     try {
       let receipts: Receipt[] = []
       if (files.length > 0) {
-        const uploadFn = httpsCallable<{ files: { name: string; data: string }[]; committee: string }, Receipt[]>(
+        const uploadFn = httpsCallable<{ files: { name: string; data: string }[]; committee: string; projectId: string }, Receipt[]>(
           functions,
           'uploadReceipts'
         )
@@ -184,7 +186,7 @@ export default function RequestFormPage() {
             data: await fileToBase64(f),
           }))
         )
-        const result = await uploadFn({ files: fileData, committee })
+        const result = await uploadFn({ files: fileData, committee, projectId: currentProject!.id })
         receipts = result.data
       }
 
@@ -198,6 +200,7 @@ export default function RequestFormPage() {
 
       await addDoc(collection(db, 'requests'), {
         createdAt: serverTimestamp(),
+        projectId: currentProject!.id,
         status: 'pending',
         payee,
         phone,

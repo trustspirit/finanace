@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore'
+import { collection, getDocs, doc, getDoc, setDoc, query, where } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import { useProject } from '../contexts/ProjectContext'
 import { PaymentRequest } from '../types'
 import { UNIQUE_BUDGET_CODES } from '../constants/budgetCodes'
 import Layout from '../components/Layout'
@@ -25,12 +26,10 @@ interface Stats {
   byBudgetCode: Record<number, { count: number; amount: number; approvedAmount: number }>
 }
 
-const BUDGET_DOC_ID = 'budget-config'
-const DOCUMENT_NO_DOC_ID = 'document-no'
-
 export default function DashboardPage() {
   const { t } = useTranslation()
   const { appUser } = useAuth()
+  const { currentProject } = useProject()
   const [stats, setStats] = useState<Stats | null>(null)
   const [budget, setBudget] = useState<BudgetConfig>({ totalBudget: 0, byCode: {} })
   const [loading, setLoading] = useState(true)
@@ -50,8 +49,9 @@ export default function DashboardPage() {
       setLoading(true)
       setError(null)
       try {
-        // Fetch requests
-        const reqSnap = await getDocs(collection(db, 'requests'))
+        // Fetch requests filtered by project
+        const q = query(collection(db, 'requests'), where('projectId', '==', currentProject?.id))
+        const reqSnap = await getDocs(q)
         const requests = reqSnap.docs.map((d) => d.data() as PaymentRequest)
 
         const stats: Stats = {
@@ -83,20 +83,20 @@ export default function DashboardPage() {
 
         setStats(stats)
 
-        // Fetch budget config
-        const budgetSnap = await getDoc(doc(db, 'settings', BUDGET_DOC_ID))
-        if (budgetSnap.exists()) {
-          const data = budgetSnap.data() as BudgetConfig
-          setBudget(data)
-          setTempBudget(data)
-        }
-
-        // Fetch document no
-        const docNoSnap = await getDoc(doc(db, 'settings', DOCUMENT_NO_DOC_ID))
-        if (docNoSnap.exists()) {
-          const val = docNoSnap.data().value || ''
-          setDocumentNo(val)
-          setTempDocNo(val)
+        // Read budget and documentNo from project document
+        if (currentProject?.id) {
+          const projectSnap = await getDoc(doc(db, 'projects', currentProject.id))
+          if (projectSnap.exists()) {
+            const projectData = projectSnap.data()
+            if (projectData.budgetConfig) {
+              setBudget(projectData.budgetConfig)
+              setTempBudget(projectData.budgetConfig)
+            }
+            if (projectData.documentNo) {
+              setDocumentNo(projectData.documentNo)
+              setTempDocNo(projectData.documentNo)
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error)
@@ -106,12 +106,13 @@ export default function DashboardPage() {
       }
     }
     fetchData()
-  }, [t])
+  }, [t, currentProject?.id])
 
   const handleSaveBudget = async () => {
+    if (!currentProject?.id) return
     setSavingBudget(true)
     try {
-      await setDoc(doc(db, 'settings', BUDGET_DOC_ID), tempBudget)
+      await setDoc(doc(db, 'projects', currentProject.id), { budgetConfig: tempBudget }, { merge: true })
       setBudget(tempBudget)
       setEditingBudget(false)
     } catch (error) {
@@ -123,9 +124,10 @@ export default function DashboardPage() {
   }
 
   const handleSaveDocNo = async () => {
+    if (!currentProject?.id) return
     setSavingDocNo(true)
     try {
-      await setDoc(doc(db, 'settings', DOCUMENT_NO_DOC_ID), { value: tempDocNo })
+      await setDoc(doc(db, 'projects', currentProject.id), { documentNo: tempDocNo }, { merge: true })
       setDocumentNo(tempDocNo)
       setEditingDocNo(false)
     } catch (error) {

@@ -4,6 +4,7 @@ import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/fires
 import { httpsCallable } from 'firebase/functions'
 import { db, functions } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import { useProject } from '../contexts/ProjectContext'
 import { updateDoc } from 'firebase/firestore'
 import { RequestItem, Receipt, Committee, PaymentRequest } from '../types'
 import Layout from '../components/Layout'
@@ -22,6 +23,7 @@ export default function ResubmitPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const { user, appUser } = useAuth()
+  const { currentProject } = useProject()
   const navigate = useNavigate()
 
   const [original, setOriginal] = useState<PaymentRequest | null>(null)
@@ -144,13 +146,13 @@ export default function ResubmitPage() {
     try {
       let receipts: Receipt[] = []
       if (files.length > 0) {
-        const uploadFn = httpsCallable<{ files: { name: string; data: string }[]; committee: string }, Receipt[]>(
+        const uploadFn = httpsCallable<{ files: { name: string; data: string }[]; committee: string; projectId: string }, Receipt[]>(
           functions, 'uploadReceipts'
         )
         const fileData = await Promise.all(
           files.map(async (f) => ({ name: f.name, data: await fileToBase64(f) }))
         )
-        const result = await uploadFn({ files: fileData, committee })
+        const result = await uploadFn({ files: fileData, committee, projectId: currentProject!.id })
         receipts = result.data
       } else {
         receipts = original.receipts
@@ -166,6 +168,7 @@ export default function ResubmitPage() {
 
       await addDoc(collection(db, 'requests'), {
         createdAt: serverTimestamp(),
+        projectId: currentProject!.id,
         status: 'pending',
         payee,
         phone,

@@ -80,18 +80,34 @@ async function uploadFileToDrive(drive, file, folderId) {
         driveUrl: response.data.webViewLink,
     };
 }
+async function getProjectFolderId(projectId, committee) {
+    if (projectId) {
+        try {
+            const projectDoc = await admin.firestore().doc(`projects/${projectId}`).get();
+            if (projectDoc.exists) {
+                const folderId = projectDoc.data()?.driveFolders?.[committee];
+                if (folderId)
+                    return folderId;
+            }
+        }
+        catch (err) {
+            console.warn('Failed to fetch project Drive settings, falling back to env vars:', err);
+        }
+    }
+    return FOLDER_IDS[committee] || '';
+}
 // 영수증 업로드
 exports.uploadReceipts = functions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
     }
-    const { files, committee } = data;
+    const { files, committee, projectId } = data;
     if (!files || files.length === 0) {
         throw new functions.https.HttpsError('invalid-argument', 'No files provided');
     }
-    const folderId = FOLDER_IDS[committee] || '';
+    const folderId = await getProjectFolderId(projectId, committee);
     if (!folderId) {
-        throw new functions.https.HttpsError('invalid-argument', `Unknown committee: ${committee}`);
+        throw new functions.https.HttpsError('invalid-argument', `No Drive folder configured for committee: ${committee}`);
     }
     const drive = getDriveService();
     const results = [];
@@ -105,11 +121,11 @@ exports.uploadBankBook = functions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
     }
-    const { file } = data;
+    const { file, projectId } = data;
     if (!file) {
         throw new functions.https.HttpsError('invalid-argument', 'No file provided');
     }
-    const folderId = FOLDER_IDS.bankbook || '';
+    const folderId = await getProjectFolderId(projectId, 'bankbook');
     if (!folderId) {
         throw new functions.https.HttpsError('failed-precondition', 'Bankbook folder not configured');
     }

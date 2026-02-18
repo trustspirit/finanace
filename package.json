@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "seed": "npx tsx scripts/seed.ts",
-    "seed:clear": "npx tsx scripts/clear.ts"
+    "seed:clear": "npx tsx scripts/clear.ts",
+    "migrate:projects": "npx tsx scripts/migrate-projects.ts",
+    "migrate:projects:emulator": "npx tsx scripts/migrate-projects.ts --emulator"
   },
   "dependencies": {
     "firebase": "^12.9.0",

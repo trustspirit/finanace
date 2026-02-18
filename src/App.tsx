@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { ProjectProvider } from './contexts/ProjectContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import DisplayNameModal from './components/DisplayNameModal'
 import Spinner from './components/Spinner'
@@ -22,10 +23,12 @@ const ResubmitPage = lazy(() => import('./pages/ResubmitPage'))
 function AppLayout() {
   const { needsDisplayName, user } = useAuth()
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Spinner /></div>}>
-      {user && needsDisplayName && <DisplayNameModal />}
-      <Outlet />
-    </Suspense>
+    <ProjectProvider>
+      <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Spinner /></div>}>
+        {user && needsDisplayName && <DisplayNameModal />}
+        <Outlet />
+      </Suspense>
+    </ProjectProvider>
   )
 }
 

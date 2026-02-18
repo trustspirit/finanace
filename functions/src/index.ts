@@ -65,21 +65,36 @@ async function uploadFileToDrive(drive: ReturnType<typeof getDriveService>, file
   }
 }
 
+async function getProjectFolderId(projectId: string | undefined, committee: string): Promise<string> {
+  if (projectId) {
+    try {
+      const projectDoc = await admin.firestore().doc(`projects/${projectId}`).get()
+      if (projectDoc.exists) {
+        const folderId = projectDoc.data()?.driveFolders?.[committee]
+        if (folderId) return folderId
+      }
+    } catch (err) {
+      console.warn('Failed to fetch project Drive settings, falling back to env vars:', err)
+    }
+  }
+  return FOLDER_IDS[committee] || ''
+}
+
 // 영수증 업로드
 export const uploadReceipts = functions.https.onCall(
-  async (data: { files: FileInput[]; committee: string }, context: functions.https.CallableContext) => {
+  async (data: { files: FileInput[]; committee: string; projectId?: string }, context: functions.https.CallableContext) => {
     if (!context.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'Must be logged in')
     }
 
-    const { files, committee } = data
+    const { files, committee, projectId } = data
     if (!files || files.length === 0) {
       throw new functions.https.HttpsError('invalid-argument', 'No files provided')
     }
 
-    const folderId = FOLDER_IDS[committee] || ''
+    const folderId = await getProjectFolderId(projectId, committee)
     if (!folderId) {
-      throw new functions.https.HttpsError('invalid-argument', `Unknown committee: ${committee}`)
+      throw new functions.https.HttpsError('invalid-argument', `No Drive folder configured for committee: ${committee}`)
     }
 
     const drive = getDriveService()
@@ -93,17 +108,17 @@ export const uploadReceipts = functions.https.onCall(
 
 // 통장사본 업로드
 export const uploadBankBook = functions.https.onCall(
-  async (data: { file: FileInput }, context: functions.https.CallableContext) => {
+  async (data: { file: FileInput; projectId?: string }, context: functions.https.CallableContext) => {
     if (!context.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'Must be logged in')
     }
 
-    const { file } = data
+    const { file, projectId } = data
     if (!file) {
       throw new functions.https.HttpsError('invalid-argument', 'No file provided')
     }
 
-    const folderId = FOLDER_IDS.bankbook || ''
+    const folderId = await getProjectFolderId(projectId, 'bankbook')
     if (!folderId) {
       throw new functions.https.HttpsError('failed-precondition', 'Bankbook folder not configured')
     }

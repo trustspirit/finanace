@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth'
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { auth, googleProvider, db } from '../lib/firebase'
 import i18n from '../lib/i18n'
 import { AppUser } from '../types'
@@ -35,6 +35,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setAppUser(data)
             setNeedsDisplayName(!data.displayName)
           } else {
+            // Get default project ID
+            let defaultProjectIds: string[] = []
+            try {
+              const globalSnap = await getDoc(doc(db, 'settings', 'global'))
+              if (globalSnap.exists()) {
+                const defaultPid = globalSnap.data().defaultProjectId
+                if (defaultPid) defaultProjectIds = [defaultPid]
+              }
+            } catch { /* ignore */ }
+
             const newUser: AppUser = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || '',
@@ -49,8 +59,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               bankBookDriveId: '',
               bankBookDriveUrl: '',
               role: 'user',
+              projectIds: defaultProjectIds,
             }
             await setDoc(doc(db, 'users', firebaseUser.uid), newUser)
+
+            // Add user to default project's memberUids
+            if (defaultProjectIds[0]) {
+              try {
+                await updateDoc(doc(db, 'projects', defaultProjectIds[0]), {
+                  memberUids: arrayUnion(firebaseUser.uid),
+                })
+              } catch { /* project may not exist yet */ }
+            }
             setAppUser(newUser)
             setNeedsDisplayName(true)
           }

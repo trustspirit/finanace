@@ -25,15 +25,16 @@ export default function SettlementReportPage() {
     if (!id) return
     const fetch = async () => {
       try {
-        const [snap, docNoSnap] = await Promise.all([
-          getDoc(doc(db, 'settlements', id)),
-          getDoc(doc(db, 'settings', 'document-no')),
-        ])
+        const snap = await getDoc(doc(db, 'settlements', id))
         if (snap.exists()) {
-          setSettlement({ id: snap.id, ...snap.data() } as Settlement)
-        }
-        if (docNoSnap.exists()) {
-          setDocumentNo(docNoSnap.data().value || '')
+          const data = { id: snap.id, ...snap.data() } as Settlement
+          setSettlement(data)
+          if (data.projectId) {
+            const projectSnap = await getDoc(doc(db, 'projects', data.projectId))
+            if (projectSnap.exists()) {
+              setDocumentNo(projectSnap.data().documentNo || '')
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to fetch settlement:', error)
