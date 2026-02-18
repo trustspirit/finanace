@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, query, where, getDocs, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
-import { PaymentRequest, Settlement } from '../types'
+import { PaymentRequest } from '../types'
 import Layout from '../components/Layout'
 
 export default function SettlementPage() {
@@ -48,9 +48,9 @@ export default function SettlementPage() {
 
   const selectedRequests = requests.filter((r) => selected.has(r.id))
 
-  // Group by payee (requestedBy.uid)
+  // Group by payee (uid + bank account to handle different accounts)
   const groupedByPayee = selectedRequests.reduce<Record<string, PaymentRequest[]>>((acc, req) => {
-    const key = req.requestedBy.uid
+    const key = `${req.requestedBy.uid}|${req.bankName}|${req.bankAccount}`
     if (!acc[key]) acc[key] = []
     acc[key].push(req)
     return acc
@@ -65,14 +65,17 @@ export default function SettlementPage() {
     try {
       const creatorName = appUser.displayName || appUser.name
 
+      const batch = writeBatch(db)
+
       for (const [, reqs] of Object.entries(groupedByPayee)) {
         const first = reqs[0]
         const allItems = reqs.flatMap((r) => r.items)
         const allReceipts = reqs.flatMap((r) => r.receipts)
         const totalAmount = allItems.reduce((sum, item) => sum + item.amount, 0)
 
-        const settlement: Omit<Settlement, 'id'> = {
-          createdAt: serverTimestamp() as unknown as Date,
+        const settlementRef = doc(collection(db, 'settlements'))
+        batch.set(settlementRef, {
+          createdAt: serverTimestamp(),
           createdBy: { uid: user.uid, name: creatorName, email: appUser.email },
           payee: first.payee,
           phone: first.phone,
@@ -85,19 +88,17 @@ export default function SettlementPage() {
           receipts: allReceipts,
           requestIds: reqs.map((r) => r.id),
           approvalSignature: first.approvalSignature || null,
-        }
+        })
 
-        const docRef = await addDoc(collection(db, 'settlements'), settlement)
-
-        // Update each request status to settled
         for (const req of reqs) {
-          await updateDoc(doc(db, 'requests', req.id), {
+          batch.update(doc(db, 'requests', req.id), {
             status: 'settled',
-            settlementId: docRef.id,
+            settlementId: settlementRef.id,
           })
         }
       }
 
+      await batch.commit()
       navigate('/admin/settlements')
     } catch (error) {
       console.error('Failed to create settlement:', error)

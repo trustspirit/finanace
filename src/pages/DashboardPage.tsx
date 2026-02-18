@@ -4,7 +4,9 @@ import { db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import { PaymentRequest } from '../types'
 import { BUDGET_CODE_LABELS, UNIQUE_BUDGET_CODES } from '../constants/budgetCodes'
+import { COMMITTEE_LABELS } from '../constants/labels'
 import Layout from '../components/Layout'
+import Spinner from '../components/Spinner'
 
 interface BudgetConfig {
   totalBudget: number
@@ -23,11 +25,6 @@ interface Stats {
   byBudgetCode: Record<number, { count: number; amount: number; approvedAmount: number }>
 }
 
-const COMMITTEE_LABELS: Record<string, string> = {
-  operations: '운영 위원회',
-  preparation: '준비 위원회',
-}
-
 const BUDGET_DOC_ID = 'budget-config'
 
 export default function DashboardPage() {
@@ -35,6 +32,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [budget, setBudget] = useState<BudgetConfig>({ totalBudget: 0, byCode: {} })
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [editingBudget, setEditingBudget] = useState(false)
   const [tempBudget, setTempBudget] = useState<BudgetConfig>({ totalBudget: 0, byCode: {} })
   const [savingBudget, setSavingBudget] = useState(false)
@@ -43,6 +41,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true)
+      setError(null)
       try {
         // Fetch requests
         const reqSnap = await getDocs(collection(db, 'requests'))
@@ -86,6 +86,7 @@ export default function DashboardPage() {
         }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error)
+        setError('데이터를 불러오는데 실패했습니다.')
       } finally {
         setLoading(false)
       }
@@ -107,8 +108,9 @@ export default function DashboardPage() {
     }
   }
 
-  if (loading) return <Layout><p className="text-gray-500">불러오는 중...</p></Layout>
-  if (!stats) return <Layout><p className="text-gray-500">데이터가 없습니다.</p></Layout>
+  if (loading) return <Layout><Spinner /></Layout>
+  if (error) return <Layout><div className="text-center py-16 text-red-500">{error}</div></Layout>
+  if (!stats) return <Layout><div className="text-center py-16 text-gray-500">데이터가 없습니다.</div></Layout>
 
   const remainingBudget = budget.totalBudget - stats.approvedAmount
   const usagePercent = budget.totalBudget > 0 ? Math.round((stats.approvedAmount / budget.totalBudget) * 100) : 0
@@ -118,7 +120,7 @@ export default function DashboardPage() {
       <h2 className="text-xl font-bold mb-6">대시보드</h2>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="전체 신청" value={`${stats.total}건`} />
         <StatCard label="대기중" value={`${stats.pending}건 (₩${stats.pendingAmount.toLocaleString()})`} color="yellow" />
         <StatCard label="승인 완료" value={`${stats.approved}건 (₩${stats.approvedAmount.toLocaleString()})`} color="green" />
@@ -129,7 +131,7 @@ export default function DashboardPage() {
       {budget.totalBudget > 0 && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-sm font-medium text-gray-700 mb-3">예산 현황</h3>
-          <div className="flex items-end gap-8 mb-3">
+          <div className="flex flex-wrap items-end gap-8 mb-3">
             <div>
               <p className="text-xs text-gray-500">총 예산</p>
               <p className="text-lg font-bold">₩{budget.totalBudget.toLocaleString()}</p>
@@ -159,69 +161,77 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* By Committee */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-sm font-medium text-gray-700 mb-4">위원회별 현황</h3>
-          <table className="w-full text-sm">
-            <thead className="border-b">
-              <tr>
-                <th className="text-left py-2">위원회</th>
-                <th className="text-right py-2">건수</th>
-                <th className="text-right py-2">총액</th>
-                <th className="text-right py-2">승인액</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {Object.entries(stats.byCommittee).map(([key, data]) => (
-                <tr key={key}>
-                  <td className="py-2">{COMMITTEE_LABELS[key] || key}</td>
-                  <td className="py-2 text-right">{data.count}건</td>
-                  <td className="py-2 text-right">₩{data.amount.toLocaleString()}</td>
-                  <td className="py-2 text-right text-green-600">₩{data.approvedAmount.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {Object.keys(stats.byCommittee).length === 0 ? (
+            <div className="text-center py-16 text-gray-500">데이터가 없습니다.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b">
+                  <tr>
+                    <th className="text-left py-2">위원회</th>
+                    <th className="text-right py-2">건수</th>
+                    <th className="text-right py-2">총액</th>
+                    <th className="text-right py-2">승인액</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {Object.entries(stats.byCommittee).map(([key, data]) => (
+                    <tr key={key}>
+                      <td className="py-2">{COMMITTEE_LABELS[key as keyof typeof COMMITTEE_LABELS] || key}</td>
+                      <td className="py-2 text-right">{data.count}건</td>
+                      <td className="py-2 text-right">₩{data.amount.toLocaleString()}</td>
+                      <td className="py-2 text-right text-green-600">₩{data.approvedAmount.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* By Budget Code */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-sm font-medium text-gray-700 mb-4">예산 코드별 현황</h3>
-          <table className="w-full text-sm">
-            <thead className="border-b">
-              <tr>
-                <th className="text-left py-2">코드</th>
-                <th className="text-right py-2">건수</th>
-                <th className="text-right py-2">승인액</th>
-                {budget.totalBudget > 0 && <th className="text-right py-2">배정 예산</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {UNIQUE_BUDGET_CODES.map((code) => {
-                const data = stats.byBudgetCode[code] || { count: 0, amount: 0, approvedAmount: 0 }
-                const codeBudget = budget.byCode[code] || 0
-                const over = codeBudget > 0 && data.approvedAmount > codeBudget
-                return (
-                  <tr key={code}>
-                    <td className="py-2">
-                      <span className="font-mono">{code}</span>
-                      <span className="ml-2 text-gray-400 text-xs">{BUDGET_CODE_LABELS[code]}</span>
-                    </td>
-                    <td className="py-2 text-right">{data.count}건</td>
-                    <td className={`py-2 text-right ${over ? 'text-red-600 font-medium' : ''}`}>
-                      ₩{data.approvedAmount.toLocaleString()}
-                    </td>
-                    {budget.totalBudget > 0 && (
-                      <td className="py-2 text-right text-gray-500">
-                        {codeBudget > 0 ? `₩${codeBudget.toLocaleString()}` : '-'}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b">
+                <tr>
+                  <th className="text-left py-2">코드</th>
+                  <th className="text-right py-2">건수</th>
+                  <th className="text-right py-2">승인액</th>
+                  {budget.totalBudget > 0 && <th className="text-right py-2">배정 예산</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {UNIQUE_BUDGET_CODES.map((code) => {
+                  const data = stats.byBudgetCode[code] || { count: 0, amount: 0, approvedAmount: 0 }
+                  const codeBudget = budget.byCode[code] || 0
+                  const over = codeBudget > 0 && data.approvedAmount > codeBudget
+                  return (
+                    <tr key={code}>
+                      <td className="py-2">
+                        <span className="font-mono">{code}</span>
+                        <span className="ml-2 text-gray-400 text-xs">{BUDGET_CODE_LABELS[code]}</span>
                       </td>
-                    )}
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                      <td className="py-2 text-right">{data.count}건</td>
+                      <td className={`py-2 text-right ${over ? 'text-red-600 font-medium' : ''}`}>
+                        ₩{data.approvedAmount.toLocaleString()}
+                      </td>
+                      {budget.totalBudget > 0 && (
+                        <td className="py-2 text-right text-gray-500">
+                          {codeBudget > 0 ? `₩${codeBudget.toLocaleString()}` : '-'}
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -250,7 +260,7 @@ export default function DashboardPage() {
             {editingBudget ? (
               <input type="number" value={tempBudget.totalBudget || ''}
                 onChange={(e) => setTempBudget({ ...tempBudget, totalBudget: parseInt(e.target.value) || 0 })}
-                className="border border-gray-300 rounded px-3 py-2 text-sm w-48"
+                className="border border-gray-300 rounded px-3 py-2 text-sm w-full sm:w-48"
                 placeholder="0" />
             ) : (
               <p className="text-sm font-medium">
@@ -259,46 +269,48 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <table className="w-full text-sm">
-            <thead className="border-b">
-              <tr>
-                <th className="text-left py-2">예산 코드</th>
-                <th className="text-left py-2">설명</th>
-                <th className="text-right py-2">배정 예산</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {UNIQUE_BUDGET_CODES.map((code) => (
-                <tr key={code}>
-                  <td className="py-2 font-mono">{code}</td>
-                  <td className="py-2 text-gray-500">{BUDGET_CODE_LABELS[code]}</td>
-                  <td className="py-2 text-right">
-                    {editingBudget ? (
-                      <input type="number" value={tempBudget.byCode[code] || ''}
-                        onChange={(e) => setTempBudget({
-                          ...tempBudget,
-                          byCode: { ...tempBudget.byCode, [code]: parseInt(e.target.value) || 0 },
-                        })}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm w-36 text-right"
-                        placeholder="0" />
-                    ) : (
-                      <span>{budget.byCode[code] ? `₩${budget.byCode[code].toLocaleString()}` : '-'}</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            {editingBudget && (
-              <tfoot className="border-t">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b">
                 <tr>
-                  <td colSpan={2} className="py-2 text-right font-medium">코드별 합계</td>
-                  <td className="py-2 text-right font-medium">
-                    ₩{Object.values(tempBudget.byCode).reduce((sum, v) => sum + (v || 0), 0).toLocaleString()}
-                  </td>
+                  <th className="text-left py-2">예산 코드</th>
+                  <th className="text-left py-2">설명</th>
+                  <th className="text-right py-2">배정 예산</th>
                 </tr>
-              </tfoot>
-            )}
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {UNIQUE_BUDGET_CODES.map((code) => (
+                  <tr key={code}>
+                    <td className="py-2 font-mono">{code}</td>
+                    <td className="py-2 text-gray-500">{BUDGET_CODE_LABELS[code]}</td>
+                    <td className="py-2 text-right">
+                      {editingBudget ? (
+                        <input type="number" value={tempBudget.byCode[code] || ''}
+                          onChange={(e) => setTempBudget({
+                            ...tempBudget,
+                            byCode: { ...tempBudget.byCode, [code]: parseInt(e.target.value) || 0 },
+                          })}
+                          className="border border-gray-300 rounded px-2 py-1 text-sm w-full sm:w-36 text-right"
+                          placeholder="0" />
+                      ) : (
+                        <span>{budget.byCode[code] ? `₩${budget.byCode[code].toLocaleString()}` : '-'}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              {editingBudget && (
+                <tfoot className="border-t">
+                  <tr>
+                    <td colSpan={2} className="py-2 text-right font-medium">코드별 합계</td>
+                    <td className="py-2 text-right font-medium">
+                      ₩{Object.values(tempBudget.byCode).reduce((sum, v) => sum + (v || 0), 0).toLocaleString()}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
         </div>
       )}
     </Layout>

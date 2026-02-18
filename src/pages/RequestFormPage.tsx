@@ -8,12 +8,12 @@ import { updateDoc, doc } from 'firebase/firestore'
 import { RequestItem, Receipt, Committee } from '../types'
 import Layout from '../components/Layout'
 import ItemRow from '../components/ItemRow'
+import ErrorAlert from '../components/ErrorAlert'
+import { formatPhone, fileToBase64, validateFiles } from '../lib/utils'
+import { COMMITTEE_LABELS } from '../constants/labels'
 
 const DRAFT_KEY = 'request-form-draft'
 const emptyItem = (): RequestItem => ({ description: '', budgetCode: 0, amount: 0 })
-const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'application/pdf']
-const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.pdf']
-const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 
 interface DraftData {
   payee: string
@@ -43,13 +43,6 @@ function saveDraft(data: Omit<DraftData, 'savedAt'>) {
 
 function clearDraft() {
   sessionStorage.removeItem(DRAFT_KEY)
-}
-
-function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 11)
-  if (digits.length <= 3) return digits
-  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
 }
 
 export default function RequestFormPage() {
@@ -98,7 +91,8 @@ export default function RequestFormPage() {
 
   // Block navigation when form has content (except to /settings)
   const blocker = useBlocker(({ nextLocation }) => {
-    if (submitted || submitting || showConfirm) return false
+    if (submitting || showConfirm) return true // Block during submission
+    if (submitted) return false // Allow after successful submission
     if (nextLocation.pathname === '/settings') return false
     return hasContent()
   })
@@ -135,7 +129,8 @@ export default function RequestFormPage() {
   }
 
   const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index))
+    const next = items.filter((_, i) => i !== index)
+    setItems(next.length > 0 ? next : [emptyItem()])
   }
 
   const addItem = () => {
@@ -215,7 +210,9 @@ export default function RequestFormPage() {
         approvedBy: null,
         approvalSignature: null,
         approvedAt: null,
+        rejectionReason: null,
         settlementId: null,
+        originalRequestId: null,
         comments,
       })
 
@@ -250,20 +247,13 @@ export default function RequestFormPage() {
         </div>
       )}
 
-      <form onSubmit={handlePreSubmit} className="bg-white rounded-lg shadow p-6 max-w-4xl mx-auto">
+      <form onSubmit={handlePreSubmit} className="bg-white rounded-lg shadow p-4 sm:p-6 max-w-4xl mx-auto">
         <h2 className="text-xl font-bold mb-1">지불 / 환불 신청서</h2>
         <p className="text-sm text-gray-500 mb-6">Payment / Reimbursement Request Form</p>
 
-        {errors.length > 0 && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded p-4">
-            <p className="text-sm font-medium text-red-800 mb-1">다음 항목을 확인해주세요:</p>
-            <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
-              {errors.map((err, i) => <li key={i}>{err}</li>)}
-            </ul>
-          </div>
-        )}
+        <ErrorAlert errors={errors} title="다음 항목을 확인해주세요" />
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               신청자 (Payee) <span className="text-red-500">*</span>
@@ -307,7 +297,7 @@ export default function RequestFormPage() {
               placeholder="예: 123-456-789012"
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">위원회 (Committee)</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -357,21 +347,10 @@ export default function RequestFormPage() {
             accept=".png,.jpg,.jpeg,.pdf"
             onChange={(e) => {
               const selected = Array.from(e.target.files || [])
-              const errs: string[] = []
-              const valid: File[] = []
-              for (const f of selected) {
-                const ext = '.' + f.name.split('.').pop()?.toLowerCase()
-                if (!ALLOWED_TYPES.includes(f.type) && !ALLOWED_EXTENSIONS.includes(ext)) {
-                  errs.push(`"${f.name}" - 허용되지 않는 파일 형식입니다. (PNG, JPG, PDF만 가능)`)
-                } else if (f.size > MAX_FILE_SIZE) {
-                  errs.push(`"${f.name}" - 파일 크기가 2MB를 초과합니다. (${(f.size / 1024 / 1024).toFixed(1)}MB)`)
-                } else {
-                  valid.push(f)
-                }
-              }
-              setFileErrors(errs)
+              const { valid, errors: fileErrs } = validateFiles(selected)
+              setFileErrors(fileErrs)
               setFiles(valid)
-              if (errs.length > 0) e.target.value = ''
+              if (fileErrs.length > 0) e.target.value = ''
             }}
             className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           />
@@ -428,7 +407,7 @@ export default function RequestFormPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">위원회</span>
-                <span>{committee === 'operations' ? '운영 위원회' : '준비 위원회'}</span>
+                <span>{COMMITTEE_LABELS[committee]}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">항목 수</span>
@@ -487,13 +466,4 @@ export default function RequestFormPage() {
       )}
     </Layout>
   )
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-  })
 }

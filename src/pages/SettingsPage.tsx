@@ -1,26 +1,11 @@
 import { useState } from 'react'
 import { httpsCallable } from 'firebase/functions'
 import { functions } from '../lib/firebase'
+import { formatPhone, fileToBase64 } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import { Committee } from '../types'
 import Layout from '../components/Layout'
 import SignaturePad from '../components/SignaturePad'
-
-function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 11)
-  if (digits.length <= 3) return digits
-  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-  })
-}
 
 export default function SettingsPage() {
   const { appUser, updateAppUser } = useAuth()

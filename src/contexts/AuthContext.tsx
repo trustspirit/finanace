@@ -32,9 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (userDoc.exists()) {
             const data = userDoc.data() as AppUser
             setAppUser(data)
-            if (!data.displayName) {
-              setNeedsDisplayName(true)
-            }
+            setNeedsDisplayName(!data.displayName)
           } else {
             const newUser: AppUser = {
               uid: firebaseUser.uid,
@@ -85,7 +83,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateAppUser = async (fields: Partial<AppUser>) => {
     if (!user) return
-    await updateDoc(doc(db, 'users', user.uid), fields)
+    const updateData: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(fields)) {
+      updateData[key] = value
+    }
+    await updateDoc(doc(db, 'users', user.uid), updateData)
     setAppUser((prev) => prev ? { ...prev, ...fields } : prev)
   }
 

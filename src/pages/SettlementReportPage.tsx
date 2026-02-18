@@ -2,9 +2,12 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
+import { formatFirestoreDate } from '../lib/utils'
 import { Settlement } from '../types'
 import { BUDGET_CODE_LABELS } from '../constants/budgetCodes'
+import { COMMITTEE_LABELS } from '../constants/labels'
 import Layout from '../components/Layout'
+import Spinner from '../components/Spinner'
 
 export default function SettlementReportPage() {
   const { id } = useParams<{ id: string }>()
@@ -59,9 +62,7 @@ export default function SettlementReportPage() {
 
     const images = await Promise.all(imagePromises)
 
-    const dateStr = settlement.createdAt && typeof settlement.createdAt === 'object' && 'toDate' in settlement.createdAt
-      ? (settlement.createdAt as unknown as { toDate: () => Date }).toDate().toLocaleDateString('ko-KR')
-      : new Date().toLocaleDateString('ko-KR')
+    const dateStr = formatFirestoreDate(settlement.createdAt) || new Date().toLocaleDateString('ko-KR')
 
     // Build print HTML
     const printHtml = `
@@ -104,7 +105,7 @@ export default function SettlementReportPage() {
     <div><span class="label">전화번호:</span> ${settlement.phone}</div>
     <div><span class="label">세션:</span> ${settlement.session}</div>
     <div><span class="label">은행:</span> ${settlement.bankName} ${settlement.bankAccount}</div>
-    <div><span class="label">위원회:</span> ${settlement.committee === 'operations' ? '운영 위원회' : '준비 위원회'}</div>
+    <div><span class="label">위원회:</span> ${COMMITTEE_LABELS[settlement.committee]}</div>
   </div>
 
   <table>
@@ -170,12 +171,10 @@ export default function SettlementReportPage() {
     }
   }
 
-  if (loading) return <Layout><p className="text-gray-500">불러오는 중...</p></Layout>
+  if (loading) return <Layout><Spinner /></Layout>
   if (!settlement) return <Layout><p className="text-gray-500">정산 리포트를 찾을 수 없습니다.</p></Layout>
 
-  const dateStr = settlement.createdAt && typeof settlement.createdAt === 'object' && 'toDate' in settlement.createdAt
-    ? (settlement.createdAt as unknown as { toDate: () => Date }).toDate().toLocaleDateString('ko-KR')
-    : '-'
+  const dateStr = formatFirestoreDate(settlement.createdAt)
 
   return (
     <Layout>
@@ -197,7 +196,7 @@ export default function SettlementReportPage() {
           <div><span className="text-gray-500">전화번호:</span> {settlement.phone}</div>
           <div><span className="text-gray-500">세션:</span> {settlement.session}</div>
           <div><span className="text-gray-500">은행 / 계좌:</span> {settlement.bankName} {settlement.bankAccount}</div>
-          <div><span className="text-gray-500">위원회:</span> {settlement.committee === 'operations' ? '운영 위원회' : '준비 위원회'}</div>
+          <div><span className="text-gray-500">위원회:</span> {COMMITTEE_LABELS[settlement.committee]}</div>
         </div>
 
         <div className="mb-2 text-sm text-gray-500">

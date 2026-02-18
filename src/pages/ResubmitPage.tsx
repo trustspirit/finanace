@@ -8,17 +8,8 @@ import { updateDoc } from 'firebase/firestore'
 import { RequestItem, Receipt, Committee, PaymentRequest } from '../types'
 import Layout from '../components/Layout'
 import ItemRow from '../components/ItemRow'
-
-const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'application/pdf']
-const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.pdf']
-const MAX_FILE_SIZE = 2 * 1024 * 1024
-
-function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 11)
-  if (digits.length <= 3) return digits
-  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
-}
+import { formatPhone, fileToBase64, validateFiles } from '../lib/utils'
+import ErrorAlert from '../components/ErrorAlert'
 
 const emptyItem = (): RequestItem => ({ description: '', budgetCode: 0, amount: 0 })
 
@@ -78,10 +69,15 @@ export default function ResubmitPage() {
     if (committee !== original.committee) return true
     if (comments !== original.comments) return true
     if (files.length > 0) return true
-    // Compare items
-    const origItems = JSON.stringify(original.items)
-    const currItems = JSON.stringify(validItems)
-    if (origItems !== currItems) return true
+    // Compare items field by field
+    if (original.items.length !== validItems.length) return true
+    const itemsChanged = validItems.some((curr, i) => {
+      const orig = original.items[i]
+      return curr.description !== orig.description ||
+             curr.budgetCode !== orig.budgetCode ||
+             curr.amount !== orig.amount
+    })
+    if (itemsChanged) return true
     return false
   }
 
@@ -92,7 +88,8 @@ export default function ResubmitPage() {
   }
 
   const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index))
+    const next = items.filter((_, i) => i !== index)
+    setItems(next.length > 0 ? next : [emptyItem()])
   }
 
   const addItem = () => {
@@ -207,13 +204,7 @@ export default function ResubmitPage() {
         <h2 className="text-xl font-bold mb-1">수정 후 재신청</h2>
         <p className="text-sm text-gray-500 mb-6">반려된 신청서를 수정하여 다시 제출합니다. 최소 1개 이상의 항목을 변경해야 합니다.</p>
 
-        {errors.length > 0 && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded p-4">
-            <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
-              {errors.map((err, i) => <li key={i}>{err}</li>)}
-            </ul>
-          </div>
-        )}
+        <ErrorAlert errors={errors} />
 
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div>
@@ -290,19 +281,8 @@ export default function ResubmitPage() {
           <input type="file" multiple accept=".png,.jpg,.jpeg,.pdf"
             onChange={(e) => {
               const selected = Array.from(e.target.files || [])
-              const errs: string[] = []
-              const valid: File[] = []
-              for (const f of selected) {
-                const ext = '.' + f.name.split('.').pop()?.toLowerCase()
-                if (!ALLOWED_TYPES.includes(f.type) && !ALLOWED_EXTENSIONS.includes(ext)) {
-                  errs.push(`"${f.name}" - 허용되지 않는 형식 (PNG, JPG, PDF만 가능)`)
-                } else if (f.size > MAX_FILE_SIZE) {
-                  errs.push(`"${f.name}" - 2MB 초과 (${(f.size / 1024 / 1024).toFixed(1)}MB)`)
-                } else {
-                  valid.push(f)
-                }
-              }
-              setFileErrors(errs)
+              const { valid, errors: fileErrs } = validateFiles(selected)
+              setFileErrors(fileErrs)
               setFiles(valid)
             }}
             className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700"
@@ -362,13 +342,4 @@ export default function ResubmitPage() {
       )}
     </Layout>
   )
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-  })
 }

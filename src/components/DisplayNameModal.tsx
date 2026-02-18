@@ -1,13 +1,8 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { Committee } from '../types'
-
-function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 11)
-  if (digits.length <= 3) return digits
-  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
-}
+import { formatPhone } from '../lib/utils'
+import ErrorAlert from './ErrorAlert'
 
 export default function DisplayNameModal() {
   const { appUser, updateAppUser, setNeedsDisplayName } = useAuth()
@@ -43,7 +38,7 @@ export default function DisplayNameModal() {
         bankName: bankName.trim(),
         bankAccount: bankAccount.trim(),
         defaultCommittee: committee,
-      } as Record<string, string>)
+      })
       setNeedsDisplayName(false)
     } catch (error) {
       console.error('Failed to save profile:', error)
@@ -61,13 +56,7 @@ export default function DisplayNameModal() {
           신청서에 사용될 기본 정보를 입력해주세요. 이후 설정에서 변경할 수 있습니다.
         </p>
 
-        {errors.length > 0 && (
-          <div className="mb-4 bg-red-50 border border-red-200 rounded p-3">
-            <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
-              {errors.map((err, i) => <li key={i}>{err}</li>)}
-            </ul>
-          </div>
-        )}
+        <ErrorAlert errors={errors} />
 
         <div className="space-y-3">
           <div>
