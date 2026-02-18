@@ -30,21 +30,17 @@ jobs:
 
       - name: Create .env.local
         run: |
-          cat <<EOF > .env.local
-          VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}
-          EOF
+          echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" >> .env.local
+          echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> .env.local
+          echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}" >> .env.local
+          echo "VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}" >> .env.local
+          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}" >> .env.local
+          echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> .env.local
 
       - name: Create functions/.env
         run: |
-          cat <<EOF > functions/.env
-          GDRIVE_FOLDER_OPERATIONS=${{ secrets.GDRIVE_FOLDER_OPERATIONS }}
-          GDRIVE_FOLDER_PREPARATION=${{ secrets.GDRIVE_FOLDER_PREPARATION }}
-          EOF
+          echo "GDRIVE_FOLDER_OPERATIONS=${{ secrets.GDRIVE_FOLDER_OPERATIONS }}" >> functions/.env
+          echo "GDRIVE_FOLDER_PREPARATION=${{ secrets.GDRIVE_FOLDER_PREPARATION }}" >> functions/.env
 
       - name: Lint
         run: npm run lint
@@ -55,5 +51,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy to Firebase
-        run: npx firebase-tools deploy --only hosting,functions --token "${{ secrets.FIREBASE_TOKEN }}"
+      - name: Deploy Hosting
+        run: npx firebase-tools deploy --only hosting --token "${{ secrets.FIREBASE_TOKEN }}"
+
+      - name: Deploy Functions
+        run: npx firebase-tools deploy --only functions --token "${{ secrets.FIREBASE_TOKEN }}"
