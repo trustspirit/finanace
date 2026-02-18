@@ -166,7 +166,7 @@ export default function AdminRequestsPage() {
                       <th className="text-left px-4 py-3 font-medium text-gray-600">{t('field.payee')}</th>
                       <th className="text-left px-4 py-3 font-medium text-gray-600">{t('field.committee')}</th>
                       <th className="text-right px-4 py-3 font-medium text-gray-600">{t('field.totalAmount')}</th>
-                      <th className="text-center px-4 py-3 font-medium text-gray-600">{t('status.pending')}</th>
+                      <th className="text-center px-4 py-3 font-medium text-gray-600">{t('status.all')}</th>
                       <th className="text-center px-4 py-3 font-medium text-gray-600"></th>
                     </tr>
                   </thead>
