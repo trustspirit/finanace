@@ -54,7 +54,7 @@ function buildPdfStyles() {
   `
 }
 
-export async function exportSettlementPdf(settlement: Settlement) {
+export async function exportSettlementPdf(settlement: Settlement, documentNo = '') {
   const images = await preloadImages(settlement.receipts)
   const dateStr = formatFirestoreDate(settlement.createdAt) || new Date().toLocaleDateString('ko-KR')
 
@@ -112,7 +112,7 @@ export async function exportSettlementPdf(settlement: Settlement) {
   <div style="margin-top:30px; border:1px solid #ddd; padding:12px; font-size:11px;">
     <p style="font-weight:600; margin-bottom:8px;">Area Office Finance Verification</p>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-      <div><p style="color:#666; font-size:10px;">Document No.</p><p style="font-weight:600;">KOR01-6762808-5xxx-KYSA2025KOR</p></div>
+      <div><p style="color:#666; font-size:10px;">Document No.</p><p style="font-weight:600;">${escapeHtml(documentNo) || '-'}</p></div>
       <div><p style="color:#666; font-size:10px;">Signature</p><div style="border-bottom:1px solid #ccc; height:30px;"></div></div>
       <div><p style="color:#666; font-size:10px;">Date approved</p><div style="border-bottom:1px solid #ccc; height:20px;"></div></div>
     </div>

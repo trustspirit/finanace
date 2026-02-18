@@ -26,6 +26,7 @@ interface Stats {
 }
 
 const BUDGET_DOC_ID = 'budget-config'
+const DOCUMENT_NO_DOC_ID = 'document-no'
 
 export default function DashboardPage() {
   const { t } = useTranslation()
@@ -37,6 +38,10 @@ export default function DashboardPage() {
   const [editingBudget, setEditingBudget] = useState(false)
   const [tempBudget, setTempBudget] = useState<BudgetConfig>({ totalBudget: 0, byCode: {} })
   const [savingBudget, setSavingBudget] = useState(false)
+  const [documentNo, setDocumentNo] = useState('')
+  const [editingDocNo, setEditingDocNo] = useState(false)
+  const [tempDocNo, setTempDocNo] = useState('')
+  const [savingDocNo, setSavingDocNo] = useState(false)
 
   const canEditBudget = appUser?.role === 'admin' || appUser?.role === 'finance'
 
@@ -85,6 +90,14 @@ export default function DashboardPage() {
           setBudget(data)
           setTempBudget(data)
         }
+
+        // Fetch document no
+        const docNoSnap = await getDoc(doc(db, 'settings', DOCUMENT_NO_DOC_ID))
+        if (docNoSnap.exists()) {
+          const val = docNoSnap.data().value || ''
+          setDocumentNo(val)
+          setTempDocNo(val)
+        }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error)
         setError(t('common.noData'))
@@ -106,6 +119,19 @@ export default function DashboardPage() {
       alert(t('dashboard.budgetSettings'))
     } finally {
       setSavingBudget(false)
+    }
+  }
+
+  const handleSaveDocNo = async () => {
+    setSavingDocNo(true)
+    try {
+      await setDoc(doc(db, 'settings', DOCUMENT_NO_DOC_ID), { value: tempDocNo })
+      setDocumentNo(tempDocNo)
+      setEditingDocNo(false)
+    } catch (error) {
+      console.error('Failed to save document no:', error)
+    } finally {
+      setSavingDocNo(false)
     }
   }
 
@@ -311,6 +337,41 @@ export default function DashboardPage() {
                 </tfoot>
               )}
             </table>
+          </div>
+        </div>
+      )}
+      {/* Document No. Settings */}
+      {canEditBudget && (
+        <div className="bg-white rounded-lg shadow p-6 mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-gray-700">{t('dashboard.documentNoSettings')}</h3>
+            {!editingDocNo ? (
+              <button onClick={() => { setTempDocNo(documentNo); setEditingDocNo(true) }}
+                className="text-sm text-blue-600 hover:text-blue-800">{t('common.edit')}</button>
+            ) : (
+              <div className="flex gap-2">
+                <button onClick={() => setEditingDocNo(false)}
+                  className="text-sm text-gray-500 hover:text-gray-700">{t('common.cancel')}</button>
+                <button onClick={handleSaveDocNo} disabled={savingDocNo}
+                  className="text-sm text-white bg-blue-600 px-3 py-1 rounded hover:bg-blue-700 disabled:bg-gray-400">
+                  {savingDocNo ? t('common.saving') : t('common.save')}
+                </button>
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">{t('dashboard.documentNo')}</label>
+            {editingDocNo ? (
+              <input type="text" value={tempDocNo}
+                onChange={(e) => setTempDocNo(e.target.value)}
+                className="border border-gray-300 rounded px-3 py-2 text-sm w-full font-mono"
+                placeholder="KOR01-6762808-5xxx-KYSA2025KOR" />
+            ) : (
+              <p className="text-sm font-mono font-medium">
+                {documentNo || t('dashboard.notSet')}
+              </p>
+            )}
+            <p className="text-xs text-gray-400 mt-1">{t('dashboard.documentNoHint')}</p>
           </div>
         </div>
       )}

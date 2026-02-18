@@ -19,14 +19,21 @@ export default function SettlementReportPage() {
   const [settlement, setSettlement] = useState<Settlement | null>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [documentNo, setDocumentNo] = useState('')
 
   useEffect(() => {
     if (!id) return
     const fetch = async () => {
       try {
-        const snap = await getDoc(doc(db, 'settlements', id))
+        const [snap, docNoSnap] = await Promise.all([
+          getDoc(doc(db, 'settlements', id)),
+          getDoc(doc(db, 'settings', 'document-no')),
+        ])
         if (snap.exists()) {
           setSettlement({ id: snap.id, ...snap.data() } as Settlement)
+        }
+        if (docNoSnap.exists()) {
+          setDocumentNo(docNoSnap.data().value || '')
         }
       } catch (error) {
         console.error('Failed to fetch settlement:', error)
@@ -40,7 +47,7 @@ export default function SettlementReportPage() {
   const handleExportPdf = async () => {
     if (!settlement) return
     setExporting(true)
-    const success = await exportSettlementPdf(settlement)
+    const success = await exportSettlementPdf(settlement, documentNo)
     if (!success) alert('Popup blocked. Please allow popups for this site.')
     setExporting(false)
   }
@@ -100,7 +107,7 @@ export default function SettlementReportPage() {
           signatureData={settlement.approvalSignature}
           approverName={settlement.approvedBy?.name}
         />
-        <FinanceVerification />
+        <FinanceVerification documentNo={documentNo} />
 
         <div className="mt-6">
           <Link to="/admin/settlements" className="text-sm text-purple-600 hover:underline">
