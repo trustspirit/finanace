@@ -11,6 +11,9 @@ import ItemRow from '../components/ItemRow'
 
 const DRAFT_KEY = 'request-form-draft'
 const emptyItem = (): RequestItem => ({ description: '', budgetCode: 0, amount: 0 })
+const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'application/pdf']
+const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.pdf']
+const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 
 interface DraftData {
   payee: string
@@ -64,6 +67,7 @@ export default function RequestFormPage() {
   const [committee, setCommittee] = useState<Committee>(draft?.committee || appUser?.defaultCommittee || 'operations')
   const [items, setItems] = useState<RequestItem[]>(draft?.items?.length ? draft.items : [emptyItem()])
   const [files, setFiles] = useState<File[]>([])
+  const [fileErrors, setFileErrors] = useState<string[]>([])
   const [comments, setComments] = useState(draft?.comments || '')
   const [submitting, setSubmitting] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -350,14 +354,41 @@ export default function RequestFormPage() {
           <input
             type="file"
             multiple
-            accept="image/*,.pdf"
-            onChange={(e) => setFiles(Array.from(e.target.files || []))}
+            accept=".png,.jpg,.jpeg,.pdf"
+            onChange={(e) => {
+              const selected = Array.from(e.target.files || [])
+              const errs: string[] = []
+              const valid: File[] = []
+              for (const f of selected) {
+                const ext = '.' + f.name.split('.').pop()?.toLowerCase()
+                if (!ALLOWED_TYPES.includes(f.type) && !ALLOWED_EXTENSIONS.includes(ext)) {
+                  errs.push(`"${f.name}" - 허용되지 않는 파일 형식입니다. (PNG, JPG, PDF만 가능)`)
+                } else if (f.size > MAX_FILE_SIZE) {
+                  errs.push(`"${f.name}" - 파일 크기가 2MB를 초과합니다. (${(f.size / 1024 / 1024).toFixed(1)}MB)`)
+                } else {
+                  valid.push(f)
+                }
+              }
+              setFileErrors(errs)
+              setFiles(valid)
+              if (errs.length > 0) e.target.value = ''
+            }}
             className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           />
-          <p className="text-xs text-gray-400 mt-1">영수증 이미지 또는 PDF 파일 (Google Drive에 업로드됩니다)</p>
+          <p className="text-xs text-gray-400 mt-1">PNG, JPG, PDF 파일만 가능 (파일당 최대 2MB)</p>
+          {fileErrors.length > 0 && (
+            <ul className="mt-2 text-sm text-red-600 space-y-1">
+              {fileErrors.map((err, i) => <li key={i}>{err}</li>)}
+            </ul>
+          )}
           {files.length > 0 && (
             <ul className="mt-2 text-sm text-gray-600">
-              {files.map((f, i) => <li key={i}>{f.name}</li>)}
+              {files.map((f, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <span>{f.name}</span>
+                  <span className="text-xs text-gray-400">({(f.size / 1024).toFixed(0)}KB)</span>
+                </li>
+              ))}
             </ul>
           )}
         </div>

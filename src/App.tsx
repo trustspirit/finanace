@@ -13,6 +13,7 @@ import SettingsPage from './pages/SettingsPage'
 import SettlementPage from './pages/SettlementPage'
 import SettlementListPage from './pages/SettlementListPage'
 import SettlementReportPage from './pages/SettlementReportPage'
+import ResubmitPage from './pages/ResubmitPage'
 
 function AppLayout() {
   const { needsDisplayName, user } = useAuth()
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
       { path: '/request/new', element: <ProtectedRoute><RequestFormPage /></ProtectedRoute> },
       { path: '/request/:id', element: <ProtectedRoute><RequestDetailPage /></ProtectedRoute> },
       { path: '/my-requests', element: <ProtectedRoute><MyRequestsPage /></ProtectedRoute> },
+      { path: '/request/resubmit/:id', element: <ProtectedRoute><ResubmitPage /></ProtectedRoute> },
       { path: '/settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
       { path: '/admin/requests', element: <ProtectedRoute requiredRoles={['admin', 'approver']}><AdminRequestsPage /></ProtectedRoute> },
       { path: '/admin/dashboard', element: <ProtectedRoute requiredRoles={['admin']}><DashboardPage /></ProtectedRoute> },

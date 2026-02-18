@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
+import { useAuth } from '../contexts/AuthContext'
 import { PaymentRequest, AppUser } from '../types'
 import Layout from '../components/Layout'
 import StatusBadge from '../components/StatusBadge'
 
 export default function RequestDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [request, setRequest] = useState<PaymentRequest | null>(null)
   const [requester, setRequester] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
@@ -134,6 +137,25 @@ export default function RequestDetailPage() {
           <div className="mb-6">
             <h3 className="text-sm font-medium text-gray-700 mb-1">비고</h3>
             <p className="text-sm text-gray-600">{request.comments}</p>
+          </div>
+        )}
+
+        {/* 반려 사유 */}
+        {request.status === 'rejected' && request.rejectionReason && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-red-800 mb-1">반려 사유</h3>
+            <p className="text-sm text-red-700">{request.rejectionReason}</p>
+          </div>
+        )}
+
+        {/* 수정 후 재신청 버튼 (본인의 반려된 신청서만) */}
+        {request.status === 'rejected' && user?.uid === request.requestedBy.uid && (
+          <div className="mb-6">
+            <button
+              onClick={() => navigate(`/request/resubmit/${request.id}`)}
+              className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">
+              수정 후 재신청
+            </button>
           </div>
         )}
 

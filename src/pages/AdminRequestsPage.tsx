@@ -15,6 +15,8 @@ export default function AdminRequestsPage() {
   const [filter, setFilter] = useState<RequestStatus | 'all'>('all')
   const [signModalRequestId, setSignModalRequestId] = useState<string | null>(null)
   const [signatureData, setSignatureData] = useState(appUser?.signature || '')
+  const [rejectModalRequestId, setRejectModalRequestId] = useState<string | null>(null)
+  const [rejectionReason, setRejectionReason] = useState('')
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -32,6 +34,11 @@ export default function AdminRequestsPage() {
   }, [])
 
   const handleApproveWithSign = (requestId: string) => {
+    const req = requests.find((r) => r.id === requestId)
+    if (req && req.requestedBy.uid === user?.uid) {
+      alert('본인이 신청한 건은 승인할 수 없습니다.')
+      return
+    }
     setSignatureData(appUser?.signature || '')
     setSignModalRequestId(requestId)
   }
@@ -62,27 +69,41 @@ export default function AdminRequestsPage() {
     setSignModalRequestId(null)
   }
 
-  const handleReject = async (requestId: string) => {
-    if (!user || !appUser) return
-    const confirmed = window.confirm('반려하시겠습니까?')
-    if (!confirmed) return
+  const handleRejectOpen = (requestId: string) => {
+    const req = requests.find((r) => r.id === requestId)
+    if (req && req.requestedBy.uid === user?.uid) {
+      alert('본인이 신청한 건은 반려할 수 없습니다.')
+      return
+    }
+    setRejectionReason('')
+    setRejectModalRequestId(requestId)
+  }
+
+  const handleRejectConfirm = async () => {
+    if (!user || !appUser || !rejectModalRequestId) return
+    if (!rejectionReason.trim()) {
+      alert('반려 사유를 입력해주세요.')
+      return
+    }
 
     const approverName = appUser.displayName || appUser.name
 
-    await updateDoc(doc(db, 'requests', requestId), {
+    await updateDoc(doc(db, 'requests', rejectModalRequestId), {
       status: 'rejected',
       approvedBy: { uid: user.uid, name: approverName, email: appUser.email },
       approvalSignature: null,
       approvedAt: serverTimestamp(),
+      rejectionReason: rejectionReason.trim(),
     })
 
     setRequests((prev) =>
       prev.map((r) =>
-        r.id === requestId
-          ? { ...r, status: 'rejected' as const, approvedBy: { uid: user.uid, name: approverName, email: appUser.email } }
+        r.id === rejectModalRequestId
+          ? { ...r, status: 'rejected' as const, approvedBy: { uid: user.uid, name: approverName, email: appUser.email }, rejectionReason: rejectionReason.trim() }
           : r
       )
     )
+    setRejectModalRequestId(null)
   }
 
   const filtered = filter === 'all' ? requests : requests.filter((r) => r.status === filter)
@@ -130,7 +151,7 @@ export default function AdminRequestsPage() {
                       <div className="flex gap-1 justify-center">
                         <button onClick={() => handleApproveWithSign(req.id)}
                           className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">승인</button>
-                        <button onClick={() => handleReject(req.id)}
+                        <button onClick={() => handleRejectOpen(req.id)}
                           className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">반려</button>
                       </div>
                     )}
@@ -181,6 +202,34 @@ export default function AdminRequestsPage() {
               <button onClick={handleConfirmApproval} disabled={!signatureData}
                 className="px-4 py-2 text-sm text-white bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-400">
                 서명하고 승인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 반려 사유 모달 */}
+      {rejectModalRequestId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold mb-2">반려 사유</h3>
+            <p className="text-sm text-gray-500 mb-4">반려 사유를 입력해주세요. 신청자가 확인할 수 있습니다.</p>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              rows={4}
+              placeholder="반려 사유를 입력하세요..."
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm mb-4"
+              autoFocus
+            />
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setRejectModalRequestId(null)}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
+                취소
+              </button>
+              <button onClick={handleRejectConfirm} disabled={!rejectionReason.trim()}
+                className="px-4 py-2 text-sm text-white bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-400">
+                반려
               </button>
             </div>
           </div>

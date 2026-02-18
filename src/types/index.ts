@@ -50,7 +50,9 @@ export interface PaymentRequest {
   approvedBy: { uid: string; name: string; email: string } | null
   approvalSignature: string | null
   approvedAt: Date | null
+  rejectionReason: string | null
   settlementId: string | null
+  originalRequestId: string | null
   comments: string
 }
 
