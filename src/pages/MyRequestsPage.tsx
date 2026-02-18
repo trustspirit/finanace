@@ -38,7 +38,7 @@ export default function MyRequestsPage() {
       }
     }
     fetchRequests()
-  }, [user])
+  }, [user, t])
 
   return (
     <Layout>

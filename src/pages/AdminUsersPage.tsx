@@ -39,7 +39,7 @@ export default function AdminUsersPage() {
       }
     }
     fetchUsers()
-  }, [])
+  }, [t])
 
   const handleRoleChange = async (uid: string, newRole: UserRole) => {
     if (uid === currentUser?.uid) {

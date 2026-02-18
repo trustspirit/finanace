@@ -93,7 +93,7 @@ export default function DashboardPage() {
       }
     }
     fetchData()
-  }, [])
+  }, [t])
 
   const handleSaveBudget = async () => {
     setSavingBudget(true)
