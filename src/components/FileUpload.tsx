@@ -20,10 +20,10 @@ export default function FileUpload({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || [])
-    const { valid, errors: fileErrs } = validateFiles(selected)
+    const { valid, errors: fileErrs } = validateFiles(selected, t)
     setErrors(fileErrs)
-    onFilesChange(valid)
-    if (fileErrs.length > 0) e.target.value = ''
+    onFilesChange([...files, ...valid])
+    e.target.value = ''
   }
 
   return (
@@ -55,6 +55,8 @@ export default function FileUpload({
             <li key={i} className="flex items-center gap-2">
               <span>{f.name}</span>
               <span className="text-xs text-gray-400">({(f.size / 1024).toFixed(0)}KB)</span>
+              <button type="button" onClick={() => onFilesChange(files.filter((_, j) => j !== i))}
+                className="text-xs text-red-500 hover:text-red-700">✕</button>
             </li>
           ))}
         </ul>

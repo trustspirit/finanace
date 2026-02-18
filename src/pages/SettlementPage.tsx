@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { collection, query, where, getDocs, doc, serverTimestamp, writeBatch } from 'firebase/firestore'
@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { PaymentRequest } from '../types'
 import { canApproveCommittee } from '../lib/roles'
 import Layout from '../components/Layout'
+import Spinner from '../components/Spinner'
 
 export default function SettlementPage() {
   const { t } = useTranslation()
@@ -17,6 +18,7 @@ export default function SettlementPage() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [processing, setProcessing] = useState(false)
+  const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null)
 
   useEffect(() => {
     const fetchApproved = async () => {
@@ -32,16 +34,31 @@ export default function SettlementPage() {
       }
     }
     fetchApproved()
-  }, [])
+  }, [role])
 
-  const toggleSelect = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
+  const handleRowClick = useCallback((id: string, index: number, e: React.MouseEvent) => {
+    if (e.shiftKey && lastClickedIndex !== null) {
+      // Shift-click: select range
+      const start = Math.min(lastClickedIndex, index)
+      const end = Math.max(lastClickedIndex, index)
+      setSelected((prev) => {
+        const next = new Set(prev)
+        for (let i = start; i <= end; i++) {
+          next.add(requests[i].id)
+        }
+        return next
+      })
+    } else {
+      // Normal click: toggle single
+      setSelected((prev) => {
+        const next = new Set(prev)
+        if (next.has(id)) next.delete(id)
+        else next.add(id)
+        return next
+      })
+    }
+    setLastClickedIndex(index)
+  }, [lastClickedIndex, requests])
 
   const toggleAll = () => {
     if (selected.size === requests.length) {
@@ -53,9 +70,9 @@ export default function SettlementPage() {
 
   const selectedRequests = requests.filter((r) => selected.has(r.id))
 
-  // Group by payee (uid + bank account to handle different accounts)
+  // Group by payee + committee + session (prevents mixing different committees/sessions)
   const groupedByPayee = selectedRequests.reduce<Record<string, PaymentRequest[]>>((acc, req) => {
-    const key = `${req.requestedBy.uid}|${req.bankName}|${req.bankAccount}`
+    const key = `${req.requestedBy.uid}|${req.bankName}|${req.bankAccount}|${req.committee}|${req.session}`
     if (!acc[key]) acc[key] = []
     acc[key].push(req)
     return acc
@@ -70,8 +87,6 @@ export default function SettlementPage() {
     try {
       const creatorName = appUser.displayName || appUser.name
 
-      const batch = writeBatch(db)
-
       // Validate all selected have approval signature
       const missingApproval = selectedRequests.find((r) => !r.approvalSignature || !r.approvedBy)
       if (missingApproval) {
@@ -79,6 +94,16 @@ export default function SettlementPage() {
         setProcessing(false)
         return
       }
+
+      // Check batch size limit (Firestore max: 500 operations per batch)
+      const totalOps = Object.values(groupedByPayee).reduce((sum, reqs) => sum + 1 + reqs.length, 0)
+      if (totalOps > 500) {
+        alert(t('settlement.settleFailed') + ': Too many operations. Please select fewer requests.')
+        setProcessing(false)
+        return
+      }
+
+      const batch = writeBatch(db)
 
       for (const [, reqs] of Object.entries(groupedByPayee)) {
         const first = reqs[0]
@@ -142,7 +167,7 @@ export default function SettlementPage() {
       )}
 
       {loading ? (
-        <p className="text-gray-500">{t('common.loading')}</p>
+        <Spinner />
       ) : requests.length === 0 ? (
         <p className="text-gray-500">{t('settlement.noApproved')}</p>
       ) : (
@@ -151,7 +176,8 @@ export default function SettlementPage() {
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-4 py-3 w-10">
-                  <input type="checkbox" checked={selected.size === requests.length}
+                  <input type="checkbox"
+                    checked={requests.length > 0 && selected.size === requests.length}
                     onChange={toggleAll} />
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">{t('field.date')}</th>
@@ -162,11 +188,14 @@ export default function SettlementPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {requests.map((req) => (
-                <tr key={req.id} className={`hover:bg-gray-50 ${selected.has(req.id) ? 'bg-purple-50' : ''}`}>
-                  <td className="px-4 py-3">
+              {requests.map((req, index) => (
+                <tr key={req.id}
+                  className={`hover:bg-gray-50 cursor-pointer select-none ${selected.has(req.id) ? 'bg-purple-50' : ''}`}
+                  onClick={(e) => handleRowClick(req.id, index, e)}
+                >
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" checked={selected.has(req.id)}
-                      onChange={() => toggleSelect(req.id)} />
+                      onChange={(e) => handleRowClick(req.id, index, e as unknown as React.MouseEvent)} />
                   </td>
                   <td className="px-4 py-3">{req.date}</td>
                   <td className="px-4 py-3">{req.payee}</td>
@@ -177,6 +206,9 @@ export default function SettlementPage() {
               ))}
             </tbody>
           </table>
+          <div className="px-4 py-2 bg-gray-50 border-t text-xs text-gray-400">
+            Shift+Click: {t('settlement.shiftSelectHint')}
+          </div>
         </div>
       )}
     </Layout>

@@ -24,16 +24,21 @@ export default function RequestDetailPage() {
   useEffect(() => {
     if (!id) return
     const fetchRequest = async () => {
-      const snap = await getDoc(doc(db, 'requests', id))
-      if (snap.exists()) {
-        const data = { id: snap.id, ...snap.data() } as PaymentRequest
-        setRequest(data)
-        const userSnap = await getDoc(doc(db, 'users', data.requestedBy.uid))
-        if (userSnap.exists()) {
-          setRequester(userSnap.data() as AppUser)
+      try {
+        const snap = await getDoc(doc(db, 'requests', id))
+        if (snap.exists()) {
+          const data = { id: snap.id, ...snap.data() } as PaymentRequest
+          setRequest(data)
+          const userSnap = await getDoc(doc(db, 'users', data.requestedBy.uid))
+          if (userSnap.exists()) {
+            setRequester(userSnap.data() as AppUser)
+          }
         }
+      } catch (error) {
+        console.error('Failed to fetch request:', error)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     fetchRequest()
   }, [id])
@@ -126,8 +131,8 @@ export default function RequestDetailPage() {
         {request.status === 'settled' && request.settlementId && (
           <div className="mt-4 pt-4 border-t">
             <span className="text-sm text-gray-500">{t('detail.settlementReport')}: </span>
-            <a href={`/admin/settlement/${request.settlementId}`}
-              className="text-sm text-purple-600 hover:underline">{t('detail.viewReport')}</a>
+            <Link to={`/admin/settlement/${request.settlementId}`}
+              className="text-sm text-purple-600 hover:underline">{t('detail.viewReport')}</Link>
           </div>
         )}
 

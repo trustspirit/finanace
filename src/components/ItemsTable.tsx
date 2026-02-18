@@ -16,7 +16,7 @@ export default function ItemsTable({ items, totalAmount }: Props) {
           <tr>
             <th className="text-left px-3 py-2">#</th>
             <th className="text-left px-3 py-2">{t('field.comments')}</th>
-            <th className="text-left px-3 py-2">Budget Code</th>
+            <th className="text-left px-3 py-2">{t('field.budgetCode')}</th>
             <th className="text-right px-3 py-2">{t('field.totalAmount')}</th>
           </tr>
         </thead>

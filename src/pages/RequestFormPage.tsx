@@ -355,7 +355,7 @@ export default function RequestFormPage() {
           { label: t('field.items'), value: t('form.itemCount', { count: validItems.length }) },
           { label: t('field.receipts'), value: t('form.fileCount', { count: files.length }) },
         ]}
-        totalAmount={totalAmount}
+        totalAmount={validItems.reduce((sum, item) => sum + item.amount, 0)}
         confirmLabel={t('form.confirmSubmit')}
       />
 

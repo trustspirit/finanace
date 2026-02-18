@@ -25,7 +25,7 @@ export function formatFirestoreDate(date: unknown): string {
 }
 
 /** 파일 유효성 검증 (허용 형식 + 용량) */
-export function validateFiles(files: File[]): { valid: File[]; errors: string[] } {
+export function validateFiles(files: File[], t?: (key: string, opts?: Record<string, unknown>) => string): { valid: File[]; errors: string[] } {
   const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'application/pdf']
   const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.pdf']
   const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
@@ -36,9 +36,13 @@ export function validateFiles(files: File[]): { valid: File[]; errors: string[] 
   for (const f of files) {
     const ext = '.' + f.name.split('.').pop()?.toLowerCase()
     if (!ALLOWED_TYPES.includes(f.type) && !ALLOWED_EXTENSIONS.includes(ext)) {
-      errors.push(`"${f.name}" - 허용되지 않는 형식 (PNG, JPG, PDF만 가능)`)
+      errors.push(t
+        ? t('validation.invalidFileType', { name: f.name })
+        : `"${f.name}" - Invalid format (PNG, JPG, PDF only)`)
     } else if (f.size > MAX_FILE_SIZE) {
-      errors.push(`"${f.name}" - 2MB 초과 (${(f.size / 1024 / 1024).toFixed(1)}MB)`)
+      errors.push(t
+        ? t('validation.fileTooLarge', { name: f.name, size: (f.size / 1024 / 1024).toFixed(1) })
+        : `"${f.name}" - Exceeds 2MB (${(f.size / 1024 / 1024).toFixed(1)}MB)`)
     } else {
       valid.push(f)
     }

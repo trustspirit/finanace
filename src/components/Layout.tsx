@@ -114,7 +114,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               ))}
               {adminItems.length > 0 && (
                 <>
-                  <p className="px-3 py-1 mt-2 text-xs text-gray-400 uppercase tracking-wider">{t('role.admin')}</p>
+                  <p className="px-3 py-1 mt-2 text-xs text-gray-400 uppercase tracking-wider">{t('nav.management')}</p>
                   {adminItems.map((item) => (
                     <Link key={item.to} to={item.to}
                       onClick={() => setMobileMenuOpen(false)}

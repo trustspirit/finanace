@@ -61,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Auth state error:', error)
         setAppUser(null)
+        setNeedsDisplayName(false)
       } finally {
         setLoading(false)
       }

@@ -11,7 +11,8 @@
     "dashboard": "대시보드",
     "userManagement": "사용자 관리",
     "settings": "설정",
-    "logout": "로그아웃"
+    "logout": "로그아웃",
+    "management": "관리"
   },
   "auth": {
     "loginTitle": "지불 / 환불 신청서",
@@ -82,6 +83,7 @@
     "googleName": "Google 계정 이름",
     "defaultCommittee": "소속 위원회",
     "totalAmount": "합계",
+    "budgetCode": "예산 코드",
     "approver": "승인자",
     "requestedBy": "신청자",
     "approvedBy": "승인자"
@@ -117,7 +119,9 @@
     "receiptsRequired": "영수증 파일을 첨부해주세요.",
     "bankBookRequired": "통장사본이 등록되지 않았습니다. 설정에서 통장사본을 업로드해주세요.",
     "noChanges": "원본 신청서에서 변경된 내용이 없습니다. 수정 후 재신청해주세요.",
-    "displayNameRequired": "선호하는 이름을 입력해주세요."
+    "displayNameRequired": "선호하는 이름을 입력해주세요.",
+    "invalidFileType": "\"{{name}}\" - 허용되지 않는 형식 (PNG, JPG, PDF만 가능)",
+    "fileTooLarge": "\"{{name}}\" - 2MB 초과 ({{size}}MB)"
   },
   "approval": {
     "signTitle": "승인 서명",
@@ -159,7 +163,8 @@
     "settleFailed": "정산 처리에 실패했습니다.",
     "report": "리포트",
     "selectedSummary": "{{count}}건 선택 | 신청자 {{payeeCount}}명 | 총액 ₩{{amount}}",
-    "settlementDate": "정산일"
+    "settlementDate": "정산일",
+    "shiftSelectHint": "범위 선택"
   },
   "dashboard": {
     "title": "대시보드",

@@ -55,7 +55,7 @@ export default function DashboardPage() {
           approved: requests.filter((r) => r.status === 'approved').length,
           rejected: requests.filter((r) => r.status === 'rejected').length,
           totalAmount: requests.reduce((sum, r) => sum + r.totalAmount, 0),
-          approvedAmount: requests.filter((r) => r.status === 'approved').reduce((sum, r) => sum + r.totalAmount, 0),
+          approvedAmount: requests.filter((r) => r.status === 'approved' || r.status === 'settled').reduce((sum, r) => sum + r.totalAmount, 0),
           pendingAmount: requests.filter((r) => r.status === 'pending').reduce((sum, r) => sum + r.totalAmount, 0),
           byCommittee: {},
           byBudgetCode: {},
@@ -66,13 +66,13 @@ export default function DashboardPage() {
           if (!stats.byCommittee[committee]) stats.byCommittee[committee] = { count: 0, amount: 0, approvedAmount: 0 }
           stats.byCommittee[committee].count++
           stats.byCommittee[committee].amount += r.totalAmount
-          if (r.status === 'approved') stats.byCommittee[committee].approvedAmount += r.totalAmount
+          if (r.status === 'approved' || r.status === 'settled') stats.byCommittee[committee].approvedAmount += r.totalAmount
 
           r.items.forEach((item) => {
             if (!stats.byBudgetCode[item.budgetCode]) stats.byBudgetCode[item.budgetCode] = { count: 0, amount: 0, approvedAmount: 0 }
             stats.byBudgetCode[item.budgetCode].count++
             stats.byBudgetCode[item.budgetCode].amount += item.amount
-            if (r.status === 'approved') stats.byBudgetCode[item.budgetCode].approvedAmount += item.amount
+            if (r.status === 'approved' || r.status === 'settled') stats.byBudgetCode[item.budgetCode].approvedAmount += item.amount
           })
         })
 

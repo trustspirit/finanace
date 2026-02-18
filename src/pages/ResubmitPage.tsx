@@ -43,20 +43,25 @@ export default function ResubmitPage() {
   useEffect(() => {
     if (!id) return
     const fetch = async () => {
-      const snap = await getDoc(doc(db, 'requests', id))
-      if (snap.exists()) {
-        const data = { id: snap.id, ...snap.data() } as PaymentRequest
-        setOriginal(data)
-        setPayee(data.payee)
-        setPhone(data.phone)
-        setBankName(data.bankName)
-        setBankAccount(data.bankAccount)
-        setDate(data.date)
-        setCommittee(data.committee)
-        setItems(data.items.length > 0 ? data.items : [emptyItem()])
-        setComments(data.comments)
+      try {
+        const snap = await getDoc(doc(db, 'requests', id))
+        if (snap.exists()) {
+          const data = { id: snap.id, ...snap.data() } as PaymentRequest
+          setOriginal(data)
+          setPayee(data.payee)
+          setPhone(data.phone)
+          setBankName(data.bankName)
+          setBankAccount(data.bankAccount)
+          setDate(data.date)
+          setCommittee(data.committee)
+          setItems(data.items.length > 0 ? data.items : [emptyItem()])
+          setComments(data.comments)
+        }
+      } catch (error) {
+        console.error('Failed to fetch request:', error)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     fetch()
   }, [id])
@@ -194,6 +199,7 @@ export default function ResubmitPage() {
   if (loading) return <Layout><Spinner /></Layout>
   if (!original) return <Layout><p className="text-gray-500">{t('detail.notFound')}</p></Layout>
   if (original.status !== 'rejected') return <Layout><p className="text-gray-500">{t('approval.rejectedOnly')}</p></Layout>
+  if (original.requestedBy.uid !== user?.uid) return <Layout><p className="text-gray-500">{t('detail.notFound')}</p></Layout>
 
   return (
     <Layout>
@@ -296,7 +302,7 @@ export default function ResubmitPage() {
           { label: t('field.items'), value: t('form.itemCount', { count: validItems.length }) },
           { label: t('field.receipts'), value: files.length > 0 ? t('form.fileCount', { count: files.length }) : t('form.fileCount', { count: original.receipts.length }) },
         ]}
-        totalAmount={totalAmount}
+        totalAmount={validItems.reduce((sum, item) => sum + item.amount, 0)}
         confirmLabel={t('approval.resubmitConfirm')}
       />
     </Layout>

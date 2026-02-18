@@ -11,7 +11,8 @@
     "dashboard": "Dashboard",
     "userManagement": "Users",
     "settings": "Settings",
-    "logout": "Logout"
+    "logout": "Logout",
+    "management": "Management"
   },
   "auth": {
     "loginTitle": "Payment / Reimbursement Request",
@@ -82,6 +83,7 @@
     "googleName": "Google Account Name",
     "defaultCommittee": "Affiliated Committee",
     "totalAmount": "Total",
+    "budgetCode": "Budget Code",
     "approver": "Approver",
     "requestedBy": "Requested by",
     "approvedBy": "Approved by"
@@ -117,7 +119,9 @@
     "receiptsRequired": "Please attach receipt files.",
     "bankBookRequired": "Bank book copy is required. Please upload in settings.",
     "noChanges": "No changes detected. Please modify at least one field.",
-    "displayNameRequired": "Preferred name is required."
+    "displayNameRequired": "Preferred name is required.",
+    "invalidFileType": "\"{{name}}\" - Invalid format (PNG, JPG, PDF only)",
+    "fileTooLarge": "\"{{name}}\" - Exceeds 2MB ({{size}}MB)"
   },
   "approval": {
     "signTitle": "Approval Signature",
@@ -159,7 +163,8 @@
     "settleFailed": "Settlement failed.",
     "report": "Report",
     "selectedSummary": "{{count}} selected | {{payeeCount}} payees | Total ₩{{amount}}",
-    "settlementDate": "Settlement Date"
+    "settlementDate": "Settlement Date",
+    "shiftSelectHint": "range select"
   },
   "dashboard": {
     "title": "Dashboard",

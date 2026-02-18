@@ -42,10 +42,12 @@ export default function AdminRequestsPage() {
 
   const handleApproveWithSign = (requestId: string) => {
     const req = requests.find((r) => r.id === requestId)
-    if (req && req.requestedBy.uid === user?.uid) {
+    if (!req) return
+    if (req.requestedBy.uid === user?.uid) {
       alert(t('approval.selfApproveError'))
       return
     }
+    if (!canApproveCommittee(role, req.committee)) return
     setSignatureData(appUser?.signature || '')
     setSignModalRequestId(requestId)
   }
@@ -59,29 +61,36 @@ export default function AdminRequestsPage() {
 
     const approverName = appUser.displayName || appUser.name
 
-    await updateDoc(doc(db, 'requests', signModalRequestId), {
-      status: 'approved',
-      approvedBy: { uid: user.uid, name: approverName, email: appUser.email },
-      approvalSignature: signatureData,
-      approvedAt: serverTimestamp(),
-    })
+    try {
+      await updateDoc(doc(db, 'requests', signModalRequestId), {
+        status: 'approved',
+        approvedBy: { uid: user.uid, name: approverName, email: appUser.email },
+        approvalSignature: signatureData,
+        approvedAt: serverTimestamp(),
+      })
 
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === signModalRequestId
-          ? { ...r, status: 'approved' as const, approvedBy: { uid: user.uid, name: approverName, email: appUser.email }, approvalSignature: signatureData }
-          : r
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === signModalRequestId
+            ? { ...r, status: 'approved' as const, approvedBy: { uid: user.uid, name: approverName, email: appUser.email }, approvalSignature: signatureData }
+            : r
+        )
       )
-    )
-    setSignModalRequestId(null)
+      setSignModalRequestId(null)
+    } catch (error) {
+      console.error('Failed to approve:', error)
+      alert(t('form.submitFailed'))
+    }
   }
 
   const handleRejectOpen = (requestId: string) => {
     const req = requests.find((r) => r.id === requestId)
-    if (req && req.requestedBy.uid === user?.uid) {
+    if (!req) return
+    if (req.requestedBy.uid === user?.uid) {
       alert(t('approval.selfRejectError'))
       return
     }
+    if (!canApproveCommittee(role, req.committee)) return
     setRejectionReason('')
     setRejectModalRequestId(requestId)
   }
@@ -95,22 +104,27 @@ export default function AdminRequestsPage() {
 
     const approverName = appUser.displayName || appUser.name
 
-    await updateDoc(doc(db, 'requests', rejectModalRequestId), {
-      status: 'rejected',
-      approvedBy: { uid: user.uid, name: approverName, email: appUser.email },
-      approvalSignature: null,
-      approvedAt: serverTimestamp(),
-      rejectionReason: rejectionReason.trim(),
-    })
+    try {
+      await updateDoc(doc(db, 'requests', rejectModalRequestId), {
+        status: 'rejected',
+        approvedBy: { uid: user.uid, name: approverName, email: appUser.email },
+        approvalSignature: null,
+        approvedAt: serverTimestamp(),
+        rejectionReason: rejectionReason.trim(),
+      })
 
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === rejectModalRequestId
-          ? { ...r, status: 'rejected' as const, approvedBy: { uid: user.uid, name: approverName, email: appUser.email }, rejectionReason: rejectionReason.trim() }
-          : r
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === rejectModalRequestId
+            ? { ...r, status: 'rejected' as const, approvedBy: { uid: user.uid, name: approverName, email: appUser.email }, rejectionReason: rejectionReason.trim() }
+            : r
+        )
       )
-    )
-    setRejectModalRequestId(null)
+      setRejectModalRequestId(null)
+    } catch (error) {
+      console.error('Failed to reject:', error)
+      alert(t('form.submitFailed'))
+    }
   }
 
   // Filter by committee access first, then by status
