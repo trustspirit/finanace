@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { collection, getDocs, doc, setDoc, query, where } from 'firebase/firestore'
-import { db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
-import { PaymentRequest } from '../types'
 import { UNIQUE_BUDGET_CODES } from '../constants/budgetCodes'
 import Layout from '../components/Layout'
 import Spinner from '../components/Spinner'
+import { useRequests } from '../hooks/queries/useRequests'
+import { useUpdateProject } from '../hooks/queries/useProjects'
 
 interface BudgetConfig {
   totalBudget: number
@@ -29,11 +28,8 @@ interface Stats {
 export default function DashboardPage() {
   const { t } = useTranslation()
   const { appUser } = useAuth()
-  const { currentProject, refreshProjects } = useProject()
-  const [stats, setStats] = useState<Stats | null>(null)
+  const { currentProject } = useProject()
   const [budget, setBudget] = useState<BudgetConfig>({ totalBudget: 0, byCode: {} })
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [editingBudget, setEditingBudget] = useState(false)
   const [tempBudget, setTempBudget] = useState<BudgetConfig>({ totalBudget: 0, byCode: {} })
   const [savingBudget, setSavingBudget] = useState(false)
@@ -42,101 +38,89 @@ export default function DashboardPage() {
   const [tempDocNo, setTempDocNo] = useState('')
   const [savingDocNo, setSavingDocNo] = useState(false)
 
+  const { data: requests = [], isLoading: loading, error } = useRequests(currentProject?.id)
+  const updateProject = useUpdateProject()
+
+  const stats = useMemo(() => {
+    if (requests.length === 0) return null
+
+    const total = requests.length
+    const pending = requests.filter((r) => r.status === 'pending').length
+    const approved = requests.filter((r) => r.status === 'approved').length
+    const rejected = requests.filter((r) => r.status === 'rejected').length
+    const totalAmount = requests.reduce((sum, r) => sum + r.totalAmount, 0)
+    const approvedAmount = requests.filter((r) => r.status === 'approved' || r.status === 'settled').reduce((sum, r) => sum + r.totalAmount, 0)
+    const pendingAmount = requests.filter((r) => r.status === 'pending').reduce((sum, r) => sum + r.totalAmount, 0)
+    const byCommittee: Stats['byCommittee'] = {}
+    const byBudgetCode: Stats['byBudgetCode'] = {}
+
+    requests.forEach((r) => {
+      const committee = r.committee || 'operations'
+      if (!byCommittee[committee]) byCommittee[committee] = { count: 0, amount: 0, approvedAmount: 0 }
+      byCommittee[committee].count++
+      byCommittee[committee].amount += r.totalAmount
+      if (r.status === 'approved' || r.status === 'settled') byCommittee[committee].approvedAmount += r.totalAmount
+
+      r.items.forEach((item) => {
+        if (!byBudgetCode[item.budgetCode]) byBudgetCode[item.budgetCode] = { count: 0, amount: 0, approvedAmount: 0 }
+        byBudgetCode[item.budgetCode].count++
+        byBudgetCode[item.budgetCode].amount += item.amount
+        if (r.status === 'approved' || r.status === 'settled') byBudgetCode[item.budgetCode].approvedAmount += item.amount
+      })
+    })
+
+    return { total, pending, approved, rejected, totalAmount, approvedAmount, pendingAmount, byCommittee, byBudgetCode }
+  }, [requests])
+
+  // Initialize budget and documentNo from currentProject
+  useEffect(() => {
+    if (currentProject?.budgetConfig) {
+      setBudget(currentProject.budgetConfig)
+      setTempBudget(currentProject.budgetConfig)
+    }
+    if (currentProject?.documentNo) {
+      setDocumentNo(currentProject.documentNo)
+      setTempDocNo(currentProject.documentNo)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProject?.id])
+
   const canEditBudget = appUser?.role === 'admin' || appUser?.role === 'finance'
 
-  useEffect(() => {
-    if (!currentProject?.id) return
-    const fetchData = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        // Fetch requests filtered by project
-        const q = query(collection(db, 'requests'), where('projectId', '==', currentProject.id))
-        const reqSnap = await getDocs(q)
-        const requests = reqSnap.docs.map((d) => d.data() as PaymentRequest)
-
-        const stats: Stats = {
-          total: requests.length,
-          pending: requests.filter((r) => r.status === 'pending').length,
-          approved: requests.filter((r) => r.status === 'approved').length,
-          rejected: requests.filter((r) => r.status === 'rejected').length,
-          totalAmount: requests.reduce((sum, r) => sum + r.totalAmount, 0),
-          approvedAmount: requests.filter((r) => r.status === 'approved' || r.status === 'settled').reduce((sum, r) => sum + r.totalAmount, 0),
-          pendingAmount: requests.filter((r) => r.status === 'pending').reduce((sum, r) => sum + r.totalAmount, 0),
-          byCommittee: {},
-          byBudgetCode: {},
-        }
-
-        requests.forEach((r) => {
-          const committee = r.committee || 'operations'
-          if (!stats.byCommittee[committee]) stats.byCommittee[committee] = { count: 0, amount: 0, approvedAmount: 0 }
-          stats.byCommittee[committee].count++
-          stats.byCommittee[committee].amount += r.totalAmount
-          if (r.status === 'approved' || r.status === 'settled') stats.byCommittee[committee].approvedAmount += r.totalAmount
-
-          r.items.forEach((item) => {
-            if (!stats.byBudgetCode[item.budgetCode]) stats.byBudgetCode[item.budgetCode] = { count: 0, amount: 0, approvedAmount: 0 }
-            stats.byBudgetCode[item.budgetCode].count++
-            stats.byBudgetCode[item.budgetCode].amount += item.amount
-            if (r.status === 'approved' || r.status === 'settled') stats.byBudgetCode[item.budgetCode].approvedAmount += item.amount
-          })
-        })
-
-        setStats(stats)
-
-        // Read budget and documentNo from currentProject context
-        if (currentProject?.budgetConfig) {
-          setBudget(currentProject.budgetConfig)
-          setTempBudget(currentProject.budgetConfig)
-        }
-        if (currentProject?.documentNo) {
-          setDocumentNo(currentProject.documentNo)
-          setTempDocNo(currentProject.documentNo)
-        }
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error)
-        setError(t('common.noData'))
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t, currentProject?.id])
-
-  const handleSaveBudget = async () => {
+  const handleSaveBudget = () => {
     if (!currentProject?.id) return
     setSavingBudget(true)
-    try {
-      await setDoc(doc(db, 'projects', currentProject.id), { budgetConfig: tempBudget }, { merge: true })
-      setBudget(tempBudget)
-      setEditingBudget(false)
-      await refreshProjects()
-    } catch (error) {
-      console.error('Failed to save budget:', error)
-      alert(t('dashboard.budgetSettings'))
-    } finally {
-      setSavingBudget(false)
-    }
+    updateProject.mutate({
+      projectId: currentProject!.id,
+      data: { budgetConfig: tempBudget },
+    }, {
+      onSuccess: () => {
+        setBudget(tempBudget)
+        setEditingBudget(false)
+        setSavingBudget(false)
+      },
+      onError: () => { setSavingBudget(false) },
+    })
   }
 
-  const handleSaveDocNo = async () => {
+  const handleSaveDocNo = () => {
     if (!currentProject?.id) return
     setSavingDocNo(true)
-    try {
-      await setDoc(doc(db, 'projects', currentProject.id), { documentNo: tempDocNo }, { merge: true })
-      setDocumentNo(tempDocNo)
-      setEditingDocNo(false)
-      await refreshProjects()
-    } catch (error) {
-      console.error('Failed to save document no:', error)
-    } finally {
-      setSavingDocNo(false)
-    }
+    updateProject.mutate({
+      projectId: currentProject!.id,
+      data: { documentNo: tempDocNo },
+    }, {
+      onSuccess: () => {
+        setDocumentNo(tempDocNo)
+        setEditingDocNo(false)
+        setSavingDocNo(false)
+      },
+      onError: () => { setSavingDocNo(false) },
+    })
   }
 
   if (loading) return <Layout><Spinner /></Layout>
-  if (error) return <Layout><div className="text-center py-16 text-red-500">{error}</div></Layout>
+  if (error) return <Layout><div className="text-center py-16 text-red-500">{t('common.noData')}</div></Layout>
   if (!stats) return <Layout><div className="text-center py-16 text-gray-500">{t('common.noData')}</div></Layout>
 
   const remainingBudget = budget.totalBudget - stats.approvedAmount
