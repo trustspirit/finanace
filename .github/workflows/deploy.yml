@@ -49,6 +49,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Build functions
+        run: cd functions && npm run build
+
       - name: Build
         run: npm run build
 
