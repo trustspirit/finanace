@@ -186,7 +186,7 @@ export default function ResubmitPage() {
 
   if (loading) return <Layout><Spinner /></Layout>
   if (!original) return <Layout><p className="text-gray-500">{t('detail.notFound')}</p></Layout>
-  if (original.status !== 'rejected') return <Layout><p className="text-gray-500">{t('approval.rejectedOnly')}</p></Layout>
+  if (original.status !== 'rejected' && original.status !== 'cancelled') return <Layout><p className="text-gray-500">{t('approval.rejectedOnly')}</p></Layout>
   if (original.requestedBy.uid !== user?.uid) return <Layout><p className="text-gray-500">{t('detail.notFound')}</p></Layout>
 
   return (
@@ -287,11 +287,11 @@ export default function ResubmitPage() {
         title={t('approval.resubmitTitle')}
         items={[
           { label: t('field.payee'), value: payee },
-          { label: t('field.items'), value: t('form.itemCount', { count: validItems.length }) },
-          { label: t('field.receipts'), value: files.length > 0 ? t('form.fileCount', { count: files.length }) : t('form.fileCount', { count: original.receipts.length }) },
         ]}
         totalAmount={validItems.reduce((sum, item) => sum + item.amount, 0)}
         confirmLabel={t('approval.resubmitConfirm')}
+        requestItems={validItems}
+        receiptFiles={files.length > 0 ? files : undefined}
       />
     </Layout>
   )

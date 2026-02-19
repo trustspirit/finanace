@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { validateFiles } from '../lib/utils'
 
@@ -26,6 +26,13 @@ export default function FileUpload({
     e.target.value = ''
   }
 
+  // Generate preview URLs for image files
+  const previews = useMemo(() =>
+    files.map((f) => ({
+      url: URL.createObjectURL(f),
+      isImage: f.type.startsWith('image/'),
+    })), [files])
+
   return (
     <div className="mb-6">
       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -50,16 +57,26 @@ export default function FileUpload({
         </ul>
       )}
       {files.length > 0 && (
-        <ul className="mt-2 text-sm text-gray-600">
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
           {files.map((f, i) => (
-            <li key={i} className="flex items-center gap-2">
-              <span>{f.name}</span>
-              <span className="text-xs text-gray-400">({(f.size / 1024).toFixed(0)}KB)</span>
-              <button type="button" onClick={() => onFilesChange(files.filter((_, j) => j !== i))}
-                className="text-xs text-red-500 hover:text-red-700">✕</button>
-            </li>
+            <div key={i} className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+              {previews[i].isImage ? (
+                <img src={previews[i].url} alt={f.name}
+                  className="w-full h-32 object-contain bg-white" />
+              ) : (
+                <object data={previews[i].url} type="application/pdf"
+                  className="w-full h-32 bg-white pointer-events-none">
+                  <p className="text-xs text-gray-400 p-2">{f.name}</p>
+                </object>
+              )}
+              <div className="px-2 py-1.5 border-t flex items-center justify-between gap-1">
+                <span className="text-xs text-gray-600 truncate">{f.name}</span>
+                <button type="button" onClick={() => onFilesChange(files.filter((_, j) => j !== i))}
+                  className="text-xs text-red-500 hover:text-red-700 shrink-0">✕</button>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   )

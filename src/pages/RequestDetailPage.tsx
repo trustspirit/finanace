@@ -1,7 +1,8 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
-import { useRequest } from '../hooks/queries/useRequests'
+import { useRequest, useCancelRequest } from '../hooks/queries/useRequests'
+import { useProject } from '../contexts/ProjectContext'
 import { useUser } from '../hooks/queries/useUsers'
 import { useTranslation } from 'react-i18next'
 import Layout from '../components/Layout'
@@ -15,7 +16,9 @@ export default function RequestDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
+  const { currentProject } = useProject()
   const navigate = useNavigate()
+  const cancelMutation = useCancelRequest()
   const { data: request, isLoading: requestLoading } = useRequest(id)
   const { data: requester, isLoading: requesterLoading } = useUser(request?.requestedBy.uid)
   const loading = requestLoading || requesterLoading
@@ -78,11 +81,27 @@ export default function RequestDetailPage() {
           </div>
         )}
 
-        {request.status === 'rejected' && user?.uid === request.requestedBy.uid && (
+        {(request.status === 'rejected' || request.status === 'cancelled') && user?.uid === request.requestedBy.uid && (
           <div className="mb-6">
             <button onClick={() => navigate(`/request/resubmit/${request.id}`)}
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">
               {t('approval.resubmit')}
+            </button>
+          </div>
+        )}
+
+        {request.status === 'pending' && user?.uid === request.requestedBy.uid && (
+          <div className="mb-6">
+            <button onClick={() => {
+              if (!confirm(t('approval.cancelConfirm'))) return
+              cancelMutation.mutate(
+                { requestId: request.id, projectId: currentProject!.id },
+                { onSuccess: () => navigate('/my-requests') }
+              )
+            }}
+              disabled={cancelMutation.isPending}
+              className="bg-gray-500 text-white px-4 py-2 rounded text-sm font-medium hover:bg-gray-600 disabled:bg-gray-400">
+              {cancelMutation.isPending ? t('common.saving') : t('approval.cancelRequest')}
             </button>
           </div>
         )}

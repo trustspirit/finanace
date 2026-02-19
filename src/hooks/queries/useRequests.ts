@@ -132,3 +132,19 @@ export function useRejectRequest() {
     },
   })
 }
+
+export function useCancelRequest() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (params: { requestId: string; projectId: string }) => {
+      await updateDoc(doc(db, 'requests', params.requestId), {
+        status: 'cancelled',
+      })
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.requests.all(variables.projectId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.requests.detail(variables.requestId) })
+    },
+  })
+}

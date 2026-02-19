@@ -54,11 +54,13 @@
     "admin": "Admin"
   },
   "status": {
+    "label": "Status",
     "all": "All",
     "pending": "Pending",
     "approved": "Approved",
     "rejected": "Rejected",
-    "settled": "Settled"
+    "settled": "Settled",
+    "cancelled": "Cancelled"
   },
   "committee": {
     "operations": "Session Committee",
@@ -109,6 +111,7 @@
     "leavePage": "Leave Page",
     "submitFailed": "Submission failed. Please try again.",
     "receiptHint": "PNG, JPG, PDF only (max 2MB per file)",
+    "receiptPreview": "Receipt preview — verify items and amounts match",
     "totalAmountCheck": "Please verify that the receipt amounts match the total (₩{{amount}})."
   },
   "validation": {
@@ -121,6 +124,7 @@
     "budgetCodeRequired": "Budget code is required for all items.",
     "receiptsRequired": "Please attach receipt files.",
     "bankBookRequired": "Bank book copy is required. Please upload in settings.",
+    "duplicateAmount": "A request with the same amount ₩{{amount}} already exists ({{date}}). This might be a duplicate. Continue anyway?",
     "noChanges": "No changes detected. Please modify at least one field.",
     "displayNameRequired": "Preferred name is required.",
     "invalidFileType": "\"{{name}}\" - Invalid format (PNG, JPG, PDF only)",
@@ -146,7 +150,9 @@
     "resubmitConfirm": "Confirm & Resubmit",
     "originalRequest": "← Original Request",
     "rejectedOnly": "Only rejected requests can be resubmitted.",
-    "directorRequired": "Over ₩600,000 — Director approval required"
+    "directorRequired": "Over ₩600,000 — Director approval required",
+    "cancelRequest": "Cancel Request",
+    "cancelConfirm": "Are you sure you want to cancel this request?"
   },
   "settlement": {
     "title": "Settlement",
@@ -292,8 +298,11 @@
     "title": "Receipt Management",
     "totalCount": "{{count}} total",
     "noReceipts": "No receipts",
+    "download": "Download",
     "downloadZip": "Download {{count}} (ZIP)",
     "downloading": "Downloading...",
-    "downloadFailed": "Download failed."
+    "downloadFailed": "Download failed.",
+    "partialDownload": "Failed to download {{failed}} of {{total}} files.",
+    "viewRequest": "View request"
   }
 }

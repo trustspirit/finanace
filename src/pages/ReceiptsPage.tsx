@@ -1,5 +1,8 @@
 import { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { httpsCallable } from 'firebase/functions'
+import { functions } from '../lib/firebase'
 import { useProject } from '../contexts/ProjectContext'
 import { useRequests } from '../hooks/queries/useRequests'
 import { Committee, Receipt } from '../types'
@@ -17,6 +20,22 @@ interface ReceiptRow {
   requestId: string
 }
 
+function isPdf(fileName: string) {
+  return fileName.toLowerCase().endsWith('.pdf')
+}
+
+function PdfIcon({ className }: { className?: string }) {
+  return (
+    <div className={`flex flex-col items-center justify-center bg-gray-50 text-gray-400 ${className}`}>
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+          d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+      <span className="text-[9px] font-medium">PDF</span>
+    </div>
+  )
+}
+
 export default function ReceiptsPage() {
   const { t } = useTranslation()
   const { currentProject } = useProject()
@@ -27,7 +46,7 @@ export default function ReceiptsPage() {
 
   const rows: ReceiptRow[] = useMemo(() => {
     const result: ReceiptRow[] = []
-    for (const req of requests) {
+    for (const req of requests.filter((r) => r.status !== 'cancelled')) {
       for (const receipt of req.receipts) {
         result.push({
           receipt,
@@ -71,31 +90,72 @@ export default function ReceiptsPage() {
     setSelected(new Set())
   }
 
+  const downloadFn = httpsCallable<
+    { storagePath: string },
+    { data: string; contentType: string; fileName: string }
+  >(functions, 'downloadFile')
+
+  const downloadOneFile = async (row: ReceiptRow): Promise<{ bytes: Uint8Array; ext: string } | null> => {
+    try {
+      if (row.receipt.storagePath) {
+        const result = await downloadFn({ storagePath: row.receipt.storagePath })
+        const binary = atob(result.data.data)
+        const bytes = new Uint8Array(binary.length)
+        for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j)
+        return { bytes, ext: row.receipt.fileName.split('.').pop() || 'jpg' }
+      } else {
+        const url = row.receipt.url || row.receipt.driveUrl
+        if (!url) return null
+        const response = await fetch(url, { mode: 'cors' })
+        if (!response.ok) return null
+        const blob = await response.blob()
+        if (blob.size === 0) return null
+        const buffer = await blob.arrayBuffer()
+        return { bytes: new Uint8Array(buffer), ext: row.receipt.fileName.split('.').pop() || 'jpg' }
+      }
+    } catch (err) {
+      console.warn('Download error:', row.receipt.fileName, err)
+      return null
+    }
+  }
+
   const handleDownload = async () => {
     if (selected.size === 0) return
     setDownloading(true)
 
     try {
-      const zip = new JSZip()
       const selectedRows = filtered.filter((_, i) => selected.has(i))
 
+      // Single file: download directly
+      if (selectedRows.length === 1) {
+        const row = selectedRows[0]
+        const file = await downloadOneFile(row)
+        if (!file) { alert(t('receipts.downloadFailed')); return }
+        const blob = new Blob([file.bytes])
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = `${row.requestDate}_${row.payee}.${file.ext}`
+        link.click()
+        URL.revokeObjectURL(link.href)
+        return
+      }
+
+      // Multiple files: ZIP
+      const zip = new JSZip()
+      let failCount = 0
       await Promise.all(
         selectedRows.map(async (row, i) => {
-          const url = row.receipt.url || row.receipt.driveUrl
-          if (!url) return
-
-          try {
-            const response = await fetch(url)
-            if (!response.ok) return
-            const blob = await response.blob()
-            const ext = row.receipt.fileName.split('.').pop() || 'jpg'
-            const name = `${row.requestDate}_${row.payee}_${i + 1}.${ext}`
-            zip.file(name, blob)
-          } catch {
-            // Skip failed downloads
-          }
+          const file = await downloadOneFile(row)
+          if (!file) { failCount++; return }
+          const name = `${row.requestDate}_${row.payee}_${i + 1}.${file.ext}`
+          zip.file(name, file.bytes)
         })
       )
+
+      if (failCount > 0) {
+        alert(t('receipts.partialDownload', { failed: failCount, total: selectedRows.length }))
+      }
+      if (Object.keys(zip.files).length === 0) return
 
       const content = await zip.generateAsync({ type: 'blob' })
       const link = document.createElement('a')
@@ -132,7 +192,9 @@ export default function ReceiptsPage() {
             </svg>
             {downloading
               ? t('receipts.downloading')
-              : t('receipts.downloadZip', { count: selected.size })}
+              : selected.size === 1
+                ? t('receipts.download')
+                : t('receipts.downloadZip', { count: selected.size })}
           </button>
         )}
       </div>
@@ -161,6 +223,7 @@ export default function ReceiptsPage() {
                     <th className="text-left px-4 py-3 font-medium text-gray-600">{t('field.payee')}</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">{t('field.date')}</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">{t('field.committee')}</th>
+                    <th className="text-center px-4 py-3 font-medium text-gray-600"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -177,8 +240,15 @@ export default function ReceiptsPage() {
                           <div className="flex items-center gap-3">
                             {imgUrl && (
                               <a href={imgUrl} target="_blank" rel="noopener noreferrer">
-                                <img src={imgUrl} alt={row.receipt.fileName}
-                                  className="w-10 h-10 object-cover rounded border border-gray-200 bg-gray-50" />
+                                {isPdf(row.receipt.fileName) ? (
+                                  <object data={imgUrl} type="application/pdf"
+                                    className="w-10 h-10 rounded border border-gray-200 bg-white pointer-events-none">
+                                    <PdfIcon className="w-10 h-10 rounded border border-gray-200" />
+                                  </object>
+                                ) : (
+                                  <img src={imgUrl} alt={row.receipt.fileName}
+                                    className="w-10 h-10 object-cover rounded border border-gray-200 bg-gray-50" />
+                                )}
                               </a>
                             )}
                             <a href={imgUrl} target="_blank" rel="noopener noreferrer"
@@ -190,6 +260,10 @@ export default function ReceiptsPage() {
                         <td className="px-4 py-3 text-gray-700">{row.payee}</td>
                         <td className="px-4 py-3 text-gray-500">{row.requestDate}</td>
                         <td className="px-4 py-3 text-gray-500">{t(`committee.${row.committee}Short`)}</td>
+                        <td className="px-4 py-3 text-center">
+                          <Link to={`/request/${row.requestId}`}
+                            className="text-xs text-blue-600 hover:underline">{t('receipts.viewRequest')}</Link>
+                        </td>
                       </tr>
                     )
                   })}
@@ -210,13 +284,25 @@ export default function ReceiptsPage() {
                     onClick={(e) => e.stopPropagation()}
                     className="rounded border-gray-300 shrink-0" />
                   {imgUrl && (
-                    <img src={imgUrl} alt={row.receipt.fileName}
-                      className="w-12 h-12 object-cover rounded border border-gray-200 bg-gray-50 shrink-0" />
+                    isPdf(row.receipt.fileName) ? (
+                      <object data={imgUrl} type="application/pdf"
+                        className="w-12 h-12 rounded border border-gray-200 bg-white pointer-events-none shrink-0">
+                        <PdfIcon className="w-12 h-12 rounded border border-gray-200 shrink-0" />
+                      </object>
+                    ) : (
+                      <img src={imgUrl} alt={row.receipt.fileName}
+                        className="w-12 h-12 object-cover rounded border border-gray-200 bg-gray-50 shrink-0" />
+                    )
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-900 truncate">{row.receipt.fileName}</p>
                     <p className="text-xs text-gray-500">{row.payee} &middot; {row.requestDate}</p>
-                    <p className="text-xs text-gray-400">{t(`committee.${row.committee}Short`)}</p>
+                    <p className="text-xs text-gray-400">
+                      {t(`committee.${row.committee}Short`)}
+                      {' · '}
+                      <Link to={`/request/${row.requestId}`} onClick={(e) => e.stopPropagation()}
+                        className="text-blue-600 hover:underline">{t('receipts.viewRequest')}</Link>
+                    </p>
                   </div>
                 </div>
               )

@@ -45,7 +45,7 @@ export interface AppUser {
 
 export type Committee = 'operations' | 'preparation'
 
-export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'settled'
+export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'settled' | 'cancelled'
 
 export interface RequestItem {
   description: string

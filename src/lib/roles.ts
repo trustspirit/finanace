@@ -42,7 +42,7 @@ export function canManageUsers(role: UserRole): boolean {
 
 /** Can access settlement */
 export function canAccessSettlement(role: UserRole): boolean {
-  return ['approver_ops', 'approver_prep', 'finance', 'director', 'admin'].includes(role)
+  return role === 'admin' || role === 'finance'
 }
 
 /** Can access admin menu (any non-user role) */

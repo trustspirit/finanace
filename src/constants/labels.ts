@@ -15,6 +15,7 @@ export const STATUS_LABELS: Record<RequestStatus, string> = {
   approved: '승인',
   rejected: '반려',
   settled: '정산',
+  cancelled: '취소',
 }
 
 export const STATUS_FILTER_LABELS: Record<RequestStatus | 'all', string> = {
@@ -23,4 +24,5 @@ export const STATUS_FILTER_LABELS: Record<RequestStatus | 'all', string> = {
   approved: '승인',
   settled: '정산',
   rejected: '반려',
+  cancelled: '취소',
 }

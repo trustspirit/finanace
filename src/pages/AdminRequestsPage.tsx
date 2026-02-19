@@ -113,8 +113,8 @@ export default function AdminRequestsPage() {
 
   const threshold = currentProject?.directorApprovalThreshold ?? DEFAULT_APPROVAL_THRESHOLD
 
-  // Filter by committee access first, then by status
-  const accessible = requests.filter((r) => canApproveCommittee(role, r.committee))
+  // Filter by committee access, exclude cancelled, then by status
+  const accessible = requests.filter((r) => canApproveCommittee(role, r.committee) && r.status !== 'cancelled')
   const filtered = filter === 'all' ? accessible : accessible.filter((r) => r.status === filter)
 
   const bankBookUrl = requester?.bankBookUrl || requester?.bankBookDriveUrl
@@ -161,7 +161,12 @@ export default function AdminRequestsPage() {
                         <td className="px-4 py-3">{req.payee}</td>
                         <td className="px-4 py-3">{t(`committee.${req.committee}Short`)}</td>
                         <td className="px-4 py-3 text-right">₩{req.totalAmount.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-center"><StatusBadge status={req.status} /></td>
+                        <td className="px-4 py-3 text-center">
+                          <StatusBadge status={req.status} />
+                          {req.approvedBy && (req.status === 'approved' || req.status === 'rejected') && (
+                            <p className="text-[10px] text-gray-400 mt-0.5">{req.approvedBy.name}</p>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-center">
                           {req.status === 'pending' && canApproveRequest(role, req.committee, req.totalAmount, threshold) && (
                             <div className="flex gap-1 justify-center">

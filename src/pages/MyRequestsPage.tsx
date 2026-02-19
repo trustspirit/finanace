@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useProject } from '../contexts/ProjectContext'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { useMyRequests } from '../hooks/queries/useRequests'
+import { useMyRequests, useCancelRequest } from '../hooks/queries/useRequests'
 
 import Layout from '../components/Layout'
 import StatusBadge from '../components/StatusBadge'
@@ -15,6 +15,14 @@ export default function MyRequestsPage() {
   const { user } = useAuth()
   const { currentProject } = useProject()
   const { data: requests = [], isLoading: loading, error } = useMyRequests(currentProject?.id, user?.uid)
+  const cancelMutation = useCancelRequest()
+
+  const handleCancel = (e: React.MouseEvent, requestId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!confirm(t('approval.cancelConfirm'))) return
+    cancelMutation.mutate({ requestId, projectId: currentProject!.id })
+  }
 
   return (
     <Layout>
@@ -42,10 +50,11 @@ export default function MyRequestsPage() {
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">{t('field.date')}</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">{t('field.session')}</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">{t('field.committee')}</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">{t('field.items')}</th>
                     <th className="text-right px-4 py-3 font-medium text-gray-600">{t('field.totalAmount')}</th>
-                    <th className="text-center px-4 py-3 font-medium text-gray-600">{t('status.pending')}</th>
+                    <th className="text-center px-4 py-3 font-medium text-gray-600">{t('status.label')}</th>
+                    <th className="text-center px-4 py-3 font-medium text-gray-600"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -54,10 +63,25 @@ export default function MyRequestsPage() {
                       <td className="px-4 py-3">
                         <Link to={`/request/${req.id}`} className="text-blue-600 hover:underline">{req.date}</Link>
                       </td>
-                      <td className="px-4 py-3">{req.session}</td>
+                      <td className="px-4 py-3">{t(`committee.${req.committee}Short`)}</td>
                       <td className="px-4 py-3">{t('form.itemCount', { count: req.items.length })}</td>
                       <td className="px-4 py-3 text-right">₩{req.totalAmount.toLocaleString()}</td>
                       <td className="px-4 py-3 text-center"><StatusBadge status={req.status} /></td>
+                      <td className="px-4 py-3 text-center">
+                        {req.status === 'pending' && (
+                          <button onClick={(e) => handleCancel(e, req.id)}
+                            disabled={cancelMutation.isPending}
+                            className="text-xs text-gray-500 hover:text-red-600">
+                            {t('approval.cancelRequest')}
+                          </button>
+                        )}
+                        {req.status === 'cancelled' && (
+                          <Link to={`/request/resubmit/${req.id}`} onClick={(e) => e.stopPropagation()}
+                            className="text-xs text-blue-600 hover:underline">
+                            {t('approval.resubmit')}
+                          </Link>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -73,11 +97,24 @@ export default function MyRequestsPage() {
                   <span className="text-sm font-medium text-blue-600">{req.date}</span>
                   <StatusBadge status={req.status} />
                 </div>
-                <div className="text-sm text-gray-600 mb-1">{req.session}</div>
+                <div className="text-sm text-gray-600 mb-1">{t(`committee.${req.committee}Short`)}</div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500">{t('form.itemCount', { count: req.items.length })}</span>
                   <span className="font-medium">₩{req.totalAmount.toLocaleString()}</span>
                 </div>
+                {req.status === 'pending' && (
+                  <button onClick={(e) => handleCancel(e, req.id)}
+                    disabled={cancelMutation.isPending}
+                    className="mt-2 text-xs text-gray-500 hover:text-red-600">
+                    {t('approval.cancelRequest')}
+                  </button>
+                )}
+                {req.status === 'cancelled' && (
+                  <Link to={`/request/resubmit/${req.id}`} onClick={(e) => e.stopPropagation()}
+                    className="mt-2 inline-block text-xs text-blue-600 hover:underline">
+                    {t('approval.resubmit')}
+                  </Link>
+                )}
               </Link>
             ))}
           </div>

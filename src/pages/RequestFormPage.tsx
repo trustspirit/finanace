@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../hooks/queries/queryKeys'
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
-import { useCreateRequest } from '../hooks/queries/useRequests'
+import { useCreateRequest, useMyRequests } from '../hooks/queries/useRequests'
 import { useUploadReceipts } from '../hooks/queries/useCloudFunctions'
 import { RequestItem, Receipt, Committee } from '../types'
 import Layout from '../components/Layout'
@@ -58,6 +58,7 @@ export default function RequestFormPage() {
   const queryClient = useQueryClient()
   const createRequest = useCreateRequest()
   const uploadReceiptsMutation = useUploadReceipts()
+  const { data: myRequests = [] } = useMyRequests(currentProject?.id, user?.uid)
 
   const [draft] = useState(loadDraft)
 
@@ -100,8 +101,9 @@ export default function RequestFormPage() {
 
   // Block navigation when form has content (except to /settings)
   const blocker = useBlocker(({ nextLocation }) => {
-    if (submitting || showConfirm) return true // Block during submission
     if (submitted) return false // Allow after successful submission
+    if (submitting) return false // Allow during submission (navigate after submit)
+    if (showConfirm) return true // Block while confirm modal is open
     if (nextLocation.pathname === '/settings') return false
     return hasContent()
   })
@@ -169,6 +171,18 @@ export default function RequestFormPage() {
       return
     }
     setErrors([])
+
+    // Check for duplicate amount in active requests
+    const currentTotal = validItems.reduce((sum, item) => sum + item.amount, 0)
+    const duplicate = myRequests.find(
+      (r) => r.totalAmount === currentTotal && (r.status === 'pending' || r.status === 'approved')
+    )
+    if (duplicate) {
+      if (!confirm(t('validation.duplicateAmount', { amount: currentTotal.toLocaleString(), date: duplicate.date }))) {
+        return
+      }
+    }
+
     setShowConfirm(true)
   }
 
@@ -358,11 +372,11 @@ export default function RequestFormPage() {
           { label: t('field.date'), value: date },
           { label: t('field.bankAndAccount'), value: `${bankName} ${bankAccount}` },
           { label: t('field.committee'), value: t(`committee.${committee}`) },
-          { label: t('field.items'), value: t('form.itemCount', { count: validItems.length }) },
-          { label: t('field.receipts'), value: t('form.fileCount', { count: files.length }) },
         ]}
         totalAmount={validItems.reduce((sum, item) => sum + item.amount, 0)}
         confirmLabel={t('form.confirmSubmit')}
+        requestItems={validItems}
+        receiptFiles={files}
       />
 
       {/* 페이지 이동 확인 모달 */}
@@ -378,7 +392,7 @@ export default function RequestFormPage() {
                 className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
                 {t('form.continueEditing')}
               </button>
-              <button onClick={() => blocker.proceed?.()}
+              <button onClick={() => { clearDraft(); blocker.proceed?.() }}
                 className="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700">
                 {t('form.leavePage')}
               </button>
