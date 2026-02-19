@@ -46,10 +46,10 @@ export default function DisplayNameModal() {
         const data = await fileToBase64(bankBookFile)
         const uploadFn = httpsCallable<
           { file: { name: string; data: string } },
-          { fileName: string; driveFileId: string; driveUrl: string }
+          { fileName: string; storagePath: string; url: string }
         >(functions, 'uploadBankBook')
         const result = await uploadFn({ file: { name: bankBookFile.name, data } })
-        const { driveFileId, driveUrl } = result.data
+        const { storagePath, url } = result.data
         await updateAppUser({
           displayName: displayName.trim(),
           phone: phone.trim(),
@@ -57,8 +57,8 @@ export default function DisplayNameModal() {
           bankAccount: bankAccount.trim(),
           defaultCommittee: committee,
           bankBookImage: data,
-          bankBookDriveId: driveFileId,
-          bankBookDriveUrl: driveUrl,
+          bankBookPath: storagePath,
+          bankBookUrl: url,
         })
       } else {
         await updateAppUser({

@@ -12,6 +12,7 @@ import Modal from '../components/Modal'
 import { useTranslation } from 'react-i18next'
 import { canApproveCommittee } from '../lib/roles'
 import { useRequests, useApproveRequest, useRejectRequest } from '../hooks/queries/useRequests'
+import { useUser } from '../hooks/queries/useUsers'
 
 export default function AdminRequestsPage() {
   const { t } = useTranslation()
@@ -26,6 +27,10 @@ export default function AdminRequestsPage() {
   const [signatureData, setSignatureData] = useState(appUser?.signature || '')
   const [rejectModalRequestId, setRejectModalRequestId] = useState<string | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
+
+  // Fetch the requester's user data for bank book preview in approval modal
+  const signModalRequest = requests.find((r) => r.id === signModalRequestId)
+  const { data: requester } = useUser(signModalRequest?.requestedBy.uid)
 
   const handleApproveWithSign = (requestId: string) => {
     const req = requests.find((r) => r.id === requestId)
@@ -98,6 +103,9 @@ export default function AdminRequestsPage() {
   // Filter by committee access first, then by status
   const accessible = requests.filter((r) => canApproveCommittee(role, r.committee))
   const filtered = filter === 'all' ? accessible : accessible.filter((r) => r.status === filter)
+
+  const bankBookUrl = requester?.bankBookUrl || requester?.bankBookDriveUrl
+  const bankBookImg = requester?.bankBookImage || bankBookUrl
 
   return (
     <Layout>
@@ -190,6 +198,24 @@ export default function AdminRequestsPage() {
 
       {/* 서명 승인 모달 */}
       <Modal open={!!signModalRequestId} onClose={() => setSignModalRequestId(null)} title={t('approval.signTitle')}>
+        {/* Bank book preview */}
+        {signModalRequest && (
+          <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <p className="text-xs font-medium text-gray-500 mb-1">{t('field.payee')}: {signModalRequest.payee}</p>
+            <p className="text-xs text-gray-500 mb-2">
+              {t('field.bankAndAccount')}: {signModalRequest.bankName} {signModalRequest.bankAccount}
+            </p>
+            {bankBookImg ? (
+              <a href={bankBookUrl} target="_blank" rel="noopener noreferrer">
+                <img src={bankBookImg} alt={t('field.bankBook')}
+                  className="max-h-32 rounded border border-gray-200 object-contain bg-white" />
+              </a>
+            ) : (
+              <p className="text-xs text-gray-400">{t('settings.bankBookRequiredHint')}</p>
+            )}
+          </div>
+        )}
+
         <p className="text-sm text-gray-500 mb-4">{t('approval.signDescription')}</p>
 
         {appUser?.signature && (

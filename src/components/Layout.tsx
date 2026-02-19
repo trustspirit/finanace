@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'
-import { isStaff, canAccessDashboard, canManageUsers } from '../lib/roles'
+import { isStaff, canAccessDashboard, canManageUsers, canAccessReceipts } from '../lib/roles'
 import ProjectSelector from './ProjectSelector'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -21,6 +21,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const adminItems = [
     ...(isStaff(role) ? [{ to: '/admin/requests', label: t('nav.adminRequests') }] : []),
     ...(isStaff(role) ? [{ to: '/admin/settlements', label: t('nav.settlements') }] : []),
+    ...(canAccessReceipts(role) ? [{ to: '/admin/receipts', label: t('nav.receipts') }] : []),
     ...(canAccessDashboard(role) ? [{ to: '/admin/dashboard', label: t('nav.dashboard') }] : []),
     ...(canManageUsers(role) ? [{ to: '/admin/users', label: t('nav.userManagement') }] : []),
   ]

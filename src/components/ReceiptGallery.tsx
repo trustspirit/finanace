@@ -16,22 +16,28 @@ export default function ReceiptGallery({ receipts, title }: Props) {
         {title ?? t('field.receipts')} ({receipts.length})
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {receipts.map((r, i) => (
-          <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
-            <a href={r.driveUrl} target="_blank" rel="noopener noreferrer">
-              <img
-                src={`https://drive.google.com/thumbnail?id=${r.driveFileId}&sz=w400`}
-                alt={r.fileName}
-                className="w-full h-48 object-contain bg-gray-50"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-              />
-            </a>
-            <div className="px-3 py-2 bg-gray-50 border-t">
-              <a href={r.driveUrl} target="_blank" rel="noopener noreferrer"
-                className="text-xs text-blue-600 hover:underline truncate block">{r.fileName}</a>
+        {receipts.map((r, i) => {
+          const imgUrl = r.url || r.driveUrl
+          const thumbUrl = r.url || (r.driveFileId ? `https://drive.google.com/thumbnail?id=${r.driveFileId}&sz=w400` : undefined)
+          return (
+            <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
+              <a href={imgUrl} target="_blank" rel="noopener noreferrer">
+                {thumbUrl && (
+                  <img
+                    src={thumbUrl}
+                    alt={r.fileName}
+                    className="w-full h-48 object-contain bg-gray-50"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                )}
+              </a>
+              <div className="px-3 py-2 bg-gray-50 border-t">
+                <a href={imgUrl} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:underline truncate block">{r.fileName}</a>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

@@ -11,13 +11,12 @@ interface UploadReceiptsInput {
 
 interface UploadBankBookInput {
   file: { name: string; data: string }
-  projectId?: string
 }
 
 interface UploadBankBookResult {
   fileName: string
-  driveFileId: string
-  driveUrl: string
+  storagePath: string
+  url: string
 }
 
 export function useUploadReceipts() {

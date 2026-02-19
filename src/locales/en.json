@@ -8,6 +8,7 @@
     "myRequests": "My Requests",
     "adminRequests": "Manage",
     "settlements": "Settle",
+    "receipts": "Receipts",
     "dashboard": "Dashboard",
     "userManagement": "Users",
     "settings": "Settings",
@@ -44,6 +45,7 @@
     "required": "*"
   },
   "role": {
+    "label": "Role",
     "user": "User",
     "approver_ops": "Session Approver",
     "approver_prep": "Logistical Approver",
@@ -206,7 +208,7 @@
     "title": "Settings",
     "displayNameHint": "Must match the name on your bank book. This name will be displayed on requests and in the app.",
     "bankBookUploaded": "Uploaded",
-    "bankBookViewDrive": "View in Google Drive",
+    "bankBookViewDrive": "View original",
     "bankBookUpload": "Upload",
     "bankBookUploading": "Uploading...",
     "bankBookReplaceHint": "Upload a new file to replace the existing one.",
@@ -214,7 +216,7 @@
     "signatureHint": "This signature will be used for approvals.",
     "committeeHint": "This will be the default selection on request forms.",
     "saveFailed": "Failed to save.",
-    "bankBookUploadFailed": "Upload failed. Please check Google Drive settings.",
+    "bankBookUploadFailed": "Upload failed.",
     "bankBookUploadSuccess": "Bank book copy uploaded."
   },
   "myRequests": {
@@ -237,11 +239,6 @@
     "description": "Description",
     "create": "Create Project",
     "select": "Select Project",
-    "driveFolders": "Google Drive Folder Settings",
-    "operationsFolder": "Session Folder ID",
-    "preparationFolder": "Logistical Folder ID",
-    "bankbookFolder": "Bank Book Folder ID",
-    "driveFolderHint": "Copy the folder ID from the Google Drive folder URL. (e.g., drive.google.com/drive/folders/[this part])",
     "members": "Members",
     "setDefault": "Set as Default",
     "isDefault": "Default Project",
@@ -286,5 +283,13 @@
       "otherAdmin": "Other Administrative Expenses",
       "participationFee": "Participation Fee"
     }
+  },
+  "receipts": {
+    "title": "Receipt Management",
+    "totalCount": "{{count}} total",
+    "noReceipts": "No receipts",
+    "downloadZip": "Download {{count}} (ZIP)",
+    "downloading": "Downloading...",
+    "downloadFailed": "Download failed."
   }
 }

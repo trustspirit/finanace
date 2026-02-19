@@ -18,9 +18,14 @@ export function canAccessDashboard(role: UserRole): boolean {
   return role === 'admin' || role === 'finance'
 }
 
-/** Can manage users */
+/** Can access receipts management */
+export function canAccessReceipts(role: UserRole): boolean {
+  return role === 'admin' || role === 'finance'
+}
+
+/** Can view user directory */
 export function canManageUsers(role: UserRole): boolean {
-  return role === 'admin'
+  return role === 'admin' || role === 'finance'
 }
 
 /** Can access settlement */

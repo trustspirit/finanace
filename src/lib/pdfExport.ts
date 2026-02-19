@@ -26,7 +26,7 @@ async function preloadImages(receipts: Receipt[]) {
           }
         }
         img.onerror = () => resolve({ fileName: r.fileName, dataUrl: null })
-        img.src = `https://drive.google.com/uc?export=view&id=${r.driveFileId}`
+        img.src = r.url || `https://drive.google.com/uc?export=view&id=${r.driveFileId}`
       })
     )
   )

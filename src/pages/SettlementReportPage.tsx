@@ -73,7 +73,7 @@ export default function SettlementReportPage() {
             <ul className="space-y-1">
               {settlement.receipts.map((r, i) => (
                 <li key={i}>
-                  <a href={r.driveUrl} target="_blank" rel="noopener noreferrer"
+                  <a href={r.url || r.driveUrl} target="_blank" rel="noopener noreferrer"
                     className="text-sm text-blue-600 hover:underline">{r.fileName}</a>
                 </li>
               ))}

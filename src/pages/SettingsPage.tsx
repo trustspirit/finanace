@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../hooks/queries/queryKeys'
@@ -19,7 +19,6 @@ import { useCreateProject, useUpdateProject, useUpdateProjectMembers } from '../
 function PersonalSettings() {
   const { t, i18n } = useTranslation()
   const { appUser, updateAppUser } = useAuth()
-  const { currentProject } = useProject()
   const [displayName, setDisplayName] = useState(appUser?.displayName || '')
   const [phone, setPhone] = useState(appUser?.phone || '')
   const [bankName, setBankName] = useState(appUser?.bankName || '')
@@ -31,7 +30,7 @@ function PersonalSettings() {
   const [bankBookFile, setBankBookFile] = useState<File | null>(null)
   const [uploadingBankBook, setUploadingBankBook] = useState(false)
   const [bankBookError, setBankBookError] = useState<string | null>(null)
-  const hasBankBook = !!(appUser?.bankBookDriveUrl)
+  const hasBankBook = !!(appUser?.bankBookUrl || appUser?.bankBookDriveUrl)
 
   const queryClient = useQueryClient()
   const uploadBankBook = useUploadBankBook()
@@ -51,8 +50,8 @@ function PersonalSettings() {
     setUploadingBankBook(true)
     try {
       const data = await fileToBase64(bankBookFile)
-      const { driveFileId, driveUrl } = await uploadBankBook.mutateAsync({ file: { name: bankBookFile.name, data }, projectId: currentProject?.id })
-      await updateAppUser({ bankBookImage: data, bankBookDriveId: driveFileId, bankBookDriveUrl: driveUrl })
+      const { storagePath, url } = await uploadBankBook.mutateAsync({ file: { name: bankBookFile.name, data } })
+      await updateAppUser({ bankBookImage: data, bankBookPath: storagePath, bankBookUrl: url })
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all() })
       setBankBookFile(null); alert(t('settings.bankBookUploadSuccess'))
     } catch { alert(t('settings.bankBookUploadFailed')) } finally { setUploadingBankBook(false) }
@@ -98,7 +97,7 @@ function PersonalSettings() {
           <div className="mb-3">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{t('settings.bankBookUploaded')}</span>
-              <a href={appUser?.bankBookDriveUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">{t('settings.bankBookViewDrive')}</a>
+              <a href={appUser?.bankBookUrl || appUser?.bankBookDriveUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">{t('settings.bankBookViewDrive')}</a>
             </div>
             {appUser?.bankBookImage && <img src={appUser.bankBookImage} alt={t('field.bankBook')} className="max-h-32 border border-gray-200 rounded" />}
           </div>
@@ -144,12 +143,18 @@ function ProjectManagement() {
   const { data: users = [], isLoading: usersLoading } = useUsers()
   const { data: globalSettings } = useGlobalSettings()
   const defaultProjectId = globalSettings?.defaultProjectId || ''
+  const queryClient = useQueryClient()
+
+  // Refetch projects on mount to get fresh memberUids
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.projects.root() })
+  }, [queryClient])
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
   const [creating, setCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editData, setEditData] = useState({ name: '', description: '', documentNo: '', driveFolders: { operations: '', preparation: '', bankbook: '' } })
+  const [editData, setEditData] = useState({ name: '', description: '', documentNo: '' })
   const [savingEdit, setSavingEdit] = useState(false)
 
   const createProject = useCreateProject()
@@ -173,7 +178,6 @@ function ProjectManagement() {
           createdBy: { uid: appUser.uid, name: appUser.displayName || appUser.name, email: appUser.email },
           budgetConfig: { totalBudget: 0, byCode: {} },
           documentNo: '',
-          driveFolders: { operations: '', preparation: '', bankbook: '' },
           memberUids: [appUser.uid],
           isActive: true,
         } as unknown as Omit<Project, 'id'>,
@@ -202,7 +206,6 @@ function ProjectManagement() {
       name: p.name || '',
       description: p.description || '',
       documentNo: p.documentNo || '',
-      driveFolders: p.driveFolders || { operations: '', preparation: '', bankbook: '' },
     })
   }
 
@@ -216,7 +219,6 @@ function ProjectManagement() {
           name: editData.name,
           description: editData.description,
           documentNo: editData.documentNo,
-          driveFolders: editData.driveFolders,
         },
       })
       setEditingId(null)
@@ -282,30 +284,6 @@ function ProjectManagement() {
                 <label className="block text-xs text-gray-500 mb-1">{t('dashboard.documentNo')}</label>
                 <input type="text" value={editData.documentNo} onChange={(e) => setEditData({ ...editData, documentNo: e.target.value })}
                   className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">{t('project.driveFolders')}</label>
-                <p className="text-xs text-gray-400 mb-2">{t('project.driveFolderHint')}</p>
-                <div className="space-y-2">
-                  <div>
-                    <label className="text-xs text-gray-500">{t('project.operationsFolder')}</label>
-                    <input type="text" value={editData.driveFolders.operations}
-                      onChange={(e) => setEditData({ ...editData, driveFolders: { ...editData.driveFolders, operations: e.target.value } })}
-                      className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm font-mono" placeholder="1abc..." />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">{t('project.preparationFolder')}</label>
-                    <input type="text" value={editData.driveFolders.preparation}
-                      onChange={(e) => setEditData({ ...editData, driveFolders: { ...editData.driveFolders, preparation: e.target.value } })}
-                      className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm font-mono" placeholder="1abc..." />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">{t('project.bankbookFolder')}</label>
-                    <input type="text" value={editData.driveFolders.bankbook}
-                      onChange={(e) => setEditData({ ...editData, driveFolders: { ...editData.driveFolders, bankbook: e.target.value } })}
-                      className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm font-mono" placeholder="1abc..." />
-                  </div>
-                </div>
               </div>
               {/* Members */}
               <div>

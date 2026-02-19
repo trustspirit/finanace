@@ -1,11 +1,5 @@
 export type UserRole = 'user' | 'approver_ops' | 'approver_prep' | 'finance' | 'admin'
 
-export interface ProjectDriveFolders {
-  operations: string
-  preparation: string
-  bankbook: string
-}
-
 export interface ProjectBudgetConfig {
   totalBudget: number
   byCode: Record<number, number>
@@ -19,7 +13,6 @@ export interface Project {
   createdBy: { uid: string; name: string; email: string }
   budgetConfig: ProjectBudgetConfig
   documentNo: string
-  driveFolders: ProjectDriveFolders
   memberUids: string[]
   isActive: boolean
 }
@@ -39,8 +32,12 @@ export interface AppUser {
   defaultCommittee: Committee
   signature: string
   bankBookImage: string
-  bankBookDriveId: string
-  bankBookDriveUrl: string
+  bankBookPath: string
+  bankBookUrl: string
+  /** @deprecated legacy Drive field — kept for existing data compatibility */
+  bankBookDriveId?: string
+  /** @deprecated legacy Drive field — kept for existing data compatibility */
+  bankBookDriveUrl?: string
   role: UserRole
   projectIds: string[]
 }
@@ -57,8 +54,12 @@ export interface RequestItem {
 
 export interface Receipt {
   fileName: string
-  driveFileId: string
-  driveUrl: string
+  storagePath: string
+  url: string
+  /** @deprecated legacy Drive field — kept for existing data compatibility */
+  driveFileId?: string
+  /** @deprecated legacy Drive field — kept for existing data compatibility */
+  driveUrl?: string
 }
 
 export interface PaymentRequest {

@@ -56,8 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               defaultCommittee: 'operations',
               signature: '',
               bankBookImage: '',
-              bankBookDriveId: '',
-              bankBookDriveUrl: '',
+              bankBookPath: '',
+              bankBookUrl: '',
               role: 'user',
               projectIds: defaultProjectIds,
             }

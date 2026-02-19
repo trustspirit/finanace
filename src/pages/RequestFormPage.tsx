@@ -157,7 +157,7 @@ export default function RequestFormPage() {
     const missingBudgetCode = validItems.some((item) => !item.budgetCode)
     if (missingBudgetCode) errs.push(t('validation.budgetCodeRequired'))
     if (files.length === 0) errs.push(t('validation.receiptsRequired'))
-    if (!appUser?.bankBookDriveUrl) errs.push(t('validation.bankBookRequired'))
+    if (!appUser?.bankBookUrl && !appUser?.bankBookDriveUrl) errs.push(t('validation.bankBookRequired'))
     return errs
   }
 

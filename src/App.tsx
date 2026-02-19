@@ -22,6 +22,7 @@ const SettlementPage = lazy(() => import('./pages/SettlementPage'))
 const SettlementListPage = lazy(() => import('./pages/SettlementListPage'))
 const SettlementReportPage = lazy(() => import('./pages/SettlementReportPage'))
 const ResubmitPage = lazy(() => import('./pages/ResubmitPage'))
+const ReceiptsPage = lazy(() => import('./pages/ReceiptsPage'))
 
 function AppLayout() {
   const { needsDisplayName, user } = useAuth()
@@ -47,7 +48,8 @@ const router = createBrowserRouter([
       { path: '/settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
       { path: '/admin/requests', element: <ProtectedRoute requiredRoles={['admin', 'finance', 'approver_ops', 'approver_prep']}><AdminRequestsPage /></ProtectedRoute> },
       { path: '/admin/dashboard', element: <ProtectedRoute requiredRoles={['admin', 'finance']}><DashboardPage /></ProtectedRoute> },
-      { path: '/admin/users', element: <ProtectedRoute requiredRoles={['admin']}><AdminUsersPage /></ProtectedRoute> },
+      { path: '/admin/users', element: <ProtectedRoute requiredRoles={['admin', 'finance']}><AdminUsersPage /></ProtectedRoute> },
+      { path: '/admin/receipts', element: <ProtectedRoute requiredRoles={['admin', 'finance']}><ReceiptsPage /></ProtectedRoute> },
       { path: '/admin/settlement/new', element: <ProtectedRoute requiredRoles={['admin', 'finance', 'approver_ops', 'approver_prep']}><SettlementPage /></ProtectedRoute> },
       { path: '/admin/settlements', element: <ProtectedRoute requiredRoles={['admin', 'finance', 'approver_ops', 'approver_prep']}><SettlementListPage /></ProtectedRoute> },
       { path: '/admin/settlement/:id', element: <ProtectedRoute requiredRoles={['admin', 'finance', 'approver_ops', 'approver_prep']}><SettlementReportPage /></ProtectedRoute> },
