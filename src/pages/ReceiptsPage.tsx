@@ -110,7 +110,7 @@ export default function ReceiptsPage() {
         if (!response.ok) return null
         const blob = await response.blob()
         if (blob.size === 0) return null
-        const buffer = await blob.arrayBuffer()
+        const buffer = await blob.arrayBuffer() as ArrayBuffer
         return { bytes: new Uint8Array(buffer), ext: row.receipt.fileName.split('.').pop() || 'jpg' }
       }
     } catch (err) {
