@@ -254,9 +254,29 @@ function BudgetTimeChart({
           <XAxis dataKey="label" tick={{ fontSize: 11 }} />
           <YAxis
             domain={[0, Math.ceil(totalBudget * 1.15)]}
-            ticks={[0, Math.round(totalBudget / 2), totalBudget]}
-            tick={{ fontSize: 11 }}
-            tickFormatter={formatAxis}
+            ticks={(() => {
+              const lastPoint = chartData[chartData.length - 1];
+              const used = lastPoint?.used ?? 0;
+              const combined = lastPoint?.combined ?? 0;
+              const values = new Set([0, totalBudget]);
+              if (used > 0) values.add(used);
+              if (combined > 0 && combined !== used) values.add(combined);
+              return [...values].sort((a, b) => a - b);
+            })()}
+            tick={({ x, y, payload }: { x: string | number; y: string | number; payload: { value: number } }) => {
+              const lastPoint = chartData[chartData.length - 1];
+              const used = lastPoint?.used ?? 0;
+              const combined = lastPoint?.combined ?? 0;
+              let fill = "#9CA3AF";
+              if (payload.value === used && used > 0) fill = "#3B82F6";
+              else if (payload.value === combined && combined !== used) fill = "#EAB308";
+              else if (payload.value === totalBudget) fill = "#6B7280";
+              return (
+                <text x={x} y={y} dy={4} textAnchor="end" fontSize={11} fill={fill} fontWeight={payload.value === totalBudget ? 600 : 400}>
+                  {formatAxis(payload.value)}
+                </text>
+              );
+            }}
             axisLine={false}
             tickLine={false}
           />
