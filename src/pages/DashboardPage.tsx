@@ -184,6 +184,7 @@ export default function DashboardPage() {
           totalBudget={budget.totalBudget}
           approvedAmount={stats.approvedAmount}
           pendingAmount={stats.pendingAmount}
+          requests={requests}
         />
       </div>
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AreaChart,
@@ -15,12 +15,14 @@ interface Props {
   totalBudget: number;
   approvedAmount: number;
   pendingAmount: number;
+  requests?: { date: string; totalAmount: number; status: string }[];
 }
 
 export default function BudgetRingGauge({
   totalBudget,
   approvedAmount,
   pendingAmount,
+  requests = [],
 }: Props) {
   const { t, i18n } = useTranslation();
   const [view, setView] = useState<"bar" | "chart">("bar");
@@ -161,74 +163,133 @@ export default function BudgetRingGauge({
         </>
       ) : (
         <>
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={[
-                  { x: "", total: totalBudget, combined: approvedAmount + pendingAmount, used: approvedAmount },
-                  { x: " ", total: totalBudget, combined: approvedAmount + pendingAmount, used: approvedAmount },
-                ]}
-                margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="budgetUsed" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.05} />
-                  </linearGradient>
-                  <linearGradient id="budgetPending" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#EAB308" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#EAB308" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-                <XAxis dataKey="x" tick={false} axisLine={false} />
-                <YAxis
-                  domain={[0, Math.ceil(totalBudget * 1.1)]}
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={formatAxis}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  formatter={(v: number | undefined) => `\u20A9${(v ?? 0).toLocaleString()}`}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="combined"
-                  name={t("dashboard.used") + " + " + t("dashboard.pendingAmount")}
-                  stroke="#EAB308"
-                  strokeWidth={2}
-                  fill="url(#budgetPending)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="used"
-                  name={t("dashboard.used")}
-                  stroke="#3B82F6"
-                  strokeWidth={2}
-                  fill="url(#budgetUsed)"
-                />
-                <ReferenceLine
-                  y={totalBudget}
-                  stroke="#9CA3AF"
-                  strokeWidth={2}
-                  strokeDasharray="6 3"
-                  label={{
-                    value: `${t("dashboard.totalBudget")} \u20A9${totalBudget.toLocaleString()}`,
-                    position: "insideTopLeft",
-                    fontSize: 11,
-                    fill: "#6B7280",
-                    offset: 8,
-                  }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-3">
-            {breakdown}
-          </div>
+          <BudgetTimeChart
+            totalBudget={totalBudget}
+            requests={requests}
+            formatAxis={formatAxis}
+          />
+          <div className="mt-3">{breakdown}</div>
         </>
       )}
+    </div>
+  );
+}
+
+function BudgetTimeChart({
+  totalBudget,
+  requests,
+  formatAxis,
+}: {
+  totalBudget: number;
+  requests: { date: string; totalAmount: number; status: string }[];
+  formatAxis: (v: number) => string;
+}) {
+  const { t } = useTranslation();
+
+  const chartData = useMemo(() => {
+    // Group requests by date, compute cumulative used and pending
+    const byDate: Record<string, { used: number; pending: number }> = {};
+
+    const sorted = [...requests]
+      .filter((r) => r.status !== "cancelled")
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    for (const r of sorted) {
+      if (!byDate[r.date]) byDate[r.date] = { used: 0, pending: 0 };
+      if (r.status === "approved" || r.status === "settled") {
+        byDate[r.date].used += r.totalAmount;
+      } else if (r.status === "pending") {
+        byDate[r.date].pending += r.totalAmount;
+      }
+    }
+
+    const dates = Object.keys(byDate).sort();
+    if (dates.length === 0) return [];
+
+    let cumUsed = 0;
+    let cumPending = 0;
+    return dates.map((date) => {
+      cumUsed += byDate[date].used;
+      cumPending += byDate[date].pending;
+      return {
+        date,
+        label: date.slice(5), // MM-DD
+        used: cumUsed,
+        combined: cumUsed + cumPending,
+      };
+    });
+  }, [requests]);
+
+  if (chartData.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[200px] text-gray-400 text-sm">
+        {t("common.noData")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-[200px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+          <defs>
+            <linearGradient id="budgetUsedFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />
+              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.02} />
+            </linearGradient>
+            <linearGradient id="budgetCombinedFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#EAB308" stopOpacity={0.2} />
+              <stop offset="95%" stopColor="#EAB308" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+          <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+          <YAxis
+            domain={[0, Math.ceil(totalBudget * 1.15)]}
+            tick={{ fontSize: 11 }}
+            tickFormatter={formatAxis}
+            axisLine={false}
+            tickLine={false}
+          />
+          <Tooltip
+            formatter={(v: number | undefined, name?: string) => {
+              const val = `\u20A9${(v ?? 0).toLocaleString()}`;
+              if (name === "combined") return [val, t("dashboard.used") + " + " + t("dashboard.pendingAmount")];
+              return [val, t("dashboard.used")];
+            }}
+            labelFormatter={(label) => label}
+          />
+          <Area
+            type="monotone"
+            dataKey="combined"
+            name="combined"
+            stroke="#EAB308"
+            strokeWidth={2}
+            fill="url(#budgetCombinedFill)"
+          />
+          <Area
+            type="monotone"
+            dataKey="used"
+            name="used"
+            stroke="#3B82F6"
+            strokeWidth={2}
+            fill="url(#budgetUsedFill)"
+          />
+          <ReferenceLine
+            y={totalBudget}
+            stroke="#9CA3AF"
+            strokeWidth={1.5}
+            strokeDasharray="6 3"
+            label={{
+              value: t("dashboard.totalBudget"),
+              position: "insideTopLeft",
+              fontSize: 11,
+              fill: "#6B7280",
+              offset: 6,
+            }}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   );
 }
