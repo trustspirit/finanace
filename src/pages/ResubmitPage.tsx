@@ -205,7 +205,7 @@ export default function ResubmitPage() {
 
         <ErrorAlert errors={errors} />
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('field.payee')} <span className="text-red-500">*</span></label>
             <input type="text" value={payee} onChange={(e) => setPayee(e.target.value)}
@@ -236,7 +236,7 @@ export default function ResubmitPage() {
             <input type="text" value={bankAccount} onChange={(e) => setBankAccount(e.target.value)}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <CommitteeSelect value={committee} onChange={setCommittee} />
           </div>
         </div>

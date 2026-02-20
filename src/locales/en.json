@@ -42,6 +42,7 @@
     "submit": "Submit",
     "submitting": "Submitting...",
     "noData": "No data available.",
+    "loadError": "An error occurred while loading data.",
     "required": "*"
   },
   "role": {

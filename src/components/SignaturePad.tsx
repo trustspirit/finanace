@@ -13,6 +13,7 @@ export default function SignaturePad({ width = 400, height = 150, initialData, o
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [isEmpty, setIsEmpty] = useState(!initialData)
+  const initializedRef = useRef(false)
 
   const getCtx = useCallback(() => {
     const canvas = canvasRef.current
@@ -22,6 +23,7 @@ export default function SignaturePad({ width = 400, height = 150, initialData, o
     return ctx
   }, [])
 
+  // Initialize canvas once on mount (or when dimensions change)
   useEffect(() => {
     const ctx = getCtx()
     if (!ctx) return
@@ -31,16 +33,22 @@ export default function SignaturePad({ width = 400, height = 150, initialData, o
     ctx.lineWidth = 2
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
+    initializedRef.current = false
+  }, [getCtx, width, height])
 
-    if (initialData) {
-      const img = new Image()
-      img.onload = () => {
-        const currentCtx = getCtx()
-        if (currentCtx) currentCtx.drawImage(img, 0, 0)
-      }
-      img.src = initialData
+  // Load initial data only once
+  useEffect(() => {
+    if (initializedRef.current || !initialData) return
+    const ctx = getCtx()
+    if (!ctx) return
+    const img = new Image()
+    img.onload = () => {
+      const currentCtx = getCtx()
+      if (currentCtx) currentCtx.drawImage(img, 0, 0)
+      initializedRef.current = true
     }
-  }, [getCtx, width, height, initialData])
+    img.src = initialData
+  }, [getCtx, initialData])
 
   const getPos = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current

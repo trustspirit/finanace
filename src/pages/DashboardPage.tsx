@@ -120,7 +120,7 @@ export default function DashboardPage() {
   }
 
   if (loading) return <Layout><Spinner /></Layout>
-  if (error) return <Layout><div className="text-center py-16 text-red-500">{t('common.noData')}</div></Layout>
+  if (error) return <Layout><div className="text-center py-16 text-red-500">{t('common.loadError')}</div></Layout>
   if (!stats) return <Layout><div className="text-center py-16 text-gray-500">{t('common.noData')}</div></Layout>
 
   const remainingBudget = budget.totalBudget - stats.approvedAmount

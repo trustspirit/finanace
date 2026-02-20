@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   collection, getDocs, getDoc, doc, addDoc, updateDoc,
-  query, where, orderBy, serverTimestamp,
+  query, where, orderBy, serverTimestamp, runTransaction,
 } from 'firebase/firestore'
 import { db } from '../../lib/firebase'
 import { queryKeys } from './queryKeys'
@@ -94,11 +94,18 @@ export function useApproveRequest() {
       approver: { uid: string; name: string; email: string }
       signature: string
     }) => {
-      await updateDoc(doc(db, 'requests', params.requestId), {
-        status: 'approved',
-        approvedBy: params.approver,
-        approvalSignature: params.signature,
-        approvedAt: serverTimestamp(),
+      const ref = doc(db, 'requests', params.requestId)
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref)
+        if (!snap.exists() || snap.data().status !== 'pending') {
+          throw new Error('already_processed')
+        }
+        tx.update(ref, {
+          status: 'approved',
+          approvedBy: params.approver,
+          approvalSignature: params.signature,
+          approvedAt: serverTimestamp(),
+        })
       })
     },
     onSuccess: (_data, variables) => {
@@ -118,12 +125,19 @@ export function useRejectRequest() {
       approver: { uid: string; name: string; email: string }
       rejectionReason: string
     }) => {
-      await updateDoc(doc(db, 'requests', params.requestId), {
-        status: 'rejected',
-        approvedBy: params.approver,
-        approvalSignature: null,
-        approvedAt: serverTimestamp(),
-        rejectionReason: params.rejectionReason,
+      const ref = doc(db, 'requests', params.requestId)
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref)
+        if (!snap.exists() || snap.data().status !== 'pending') {
+          throw new Error('already_processed')
+        }
+        tx.update(ref, {
+          status: 'rejected',
+          approvedBy: params.approver,
+          approvalSignature: null,
+          approvedAt: serverTimestamp(),
+          rejectionReason: params.rejectionReason,
+        })
       })
     },
     onSuccess: (_data, variables) => {

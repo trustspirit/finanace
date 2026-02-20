@@ -223,7 +223,7 @@ export default function AdminRequestsPage() {
       )}
 
       {/* 서명 승인 모달 */}
-      <Modal open={!!signModalRequestId} onClose={() => setSignModalRequestId(null)} title={t('approval.signTitle')}>
+      <Modal open={!!signModalRequestId} onClose={() => { if (!approveMutation.isPending) setSignModalRequestId(null) }} title={t('approval.signTitle')}>
         {/* Bank book preview */}
         {signModalRequest && (
           <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
@@ -269,19 +269,19 @@ export default function AdminRequestsPage() {
         )}
 
         <div className="flex gap-3 justify-end mt-4">
-          <button onClick={() => setSignModalRequestId(null)}
-            className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
+          <button onClick={() => setSignModalRequestId(null)} disabled={approveMutation.isPending}
+            className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50 disabled:text-gray-400">
             {t('common.cancel')}
           </button>
-          <button onClick={handleConfirmApproval} disabled={!signatureData}
+          <button onClick={handleConfirmApproval} disabled={!signatureData || approveMutation.isPending}
             className="px-4 py-2 text-sm text-white bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-400">
-            {t('approval.signAndApprove')}
+            {approveMutation.isPending ? t('common.submitting') : t('approval.signAndApprove')}
           </button>
         </div>
       </Modal>
 
       {/* 반려 사유 모달 */}
-      <Modal open={!!rejectModalRequestId} onClose={() => setRejectModalRequestId(null)} title={t('approval.rejectTitle')}>
+      <Modal open={!!rejectModalRequestId} onClose={() => { if (!rejectMutation.isPending) setRejectModalRequestId(null) }} title={t('approval.rejectTitle')}>
         <p className="text-sm text-gray-500 mb-4">{t('approval.rejectDescription')}</p>
         <textarea
           value={rejectionReason}
@@ -292,13 +292,13 @@ export default function AdminRequestsPage() {
           autoFocus
         />
         <div className="flex gap-3 justify-end">
-          <button onClick={() => setRejectModalRequestId(null)}
-            className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
+          <button onClick={() => setRejectModalRequestId(null)} disabled={rejectMutation.isPending}
+            className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50 disabled:text-gray-400">
             {t('common.cancel')}
           </button>
-          <button onClick={handleRejectConfirm} disabled={!rejectionReason.trim()}
+          <button onClick={handleRejectConfirm} disabled={!rejectionReason.trim() || rejectMutation.isPending}
             className="px-4 py-2 text-sm text-white bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-400">
-            {t('approval.reject')}
+            {rejectMutation.isPending ? t('common.submitting') : t('approval.reject')}
           </button>
         </div>
       </Modal>

@@ -33,7 +33,7 @@ export default function MyRequestsPage() {
       {loading ? (
         <Spinner />
       ) : error ? (
-        <p className="text-red-500 text-sm">{error?.message}</p>
+        <p className="text-red-500 text-sm">{t('common.loadError')}</p>
       ) : requests.length === 0 ? (
         <EmptyState
           title={t('myRequests.noRequests')}

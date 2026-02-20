@@ -51,7 +51,7 @@ function PersonalSettings() {
     try {
       const data = await fileToBase64(bankBookFile)
       const { storagePath, url } = await uploadBankBook.mutateAsync({ file: { name: bankBookFile.name, data } })
-      await updateAppUser({ bankBookImage: data, bankBookPath: storagePath, bankBookUrl: url })
+      await updateAppUser({ bankBookImage: '', bankBookPath: storagePath, bankBookUrl: url })
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all() })
       setBankBookFile(null); alert(t('settings.bankBookUploadSuccess'))
     } catch { alert(t('settings.bankBookUploadFailed')) } finally { setUploadingBankBook(false) }

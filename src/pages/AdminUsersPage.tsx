@@ -144,7 +144,7 @@ export default function AdminUsersPage() {
       {loading ? (
         <Spinner />
       ) : error ? (
-        <p className="text-red-500 text-sm">{error?.message}</p>
+        <p className="text-red-500 text-sm">{t('common.loadError')}</p>
       ) : users.length === 0 ? (
         <EmptyState title={t('users.noUsers')} />
       ) : (
