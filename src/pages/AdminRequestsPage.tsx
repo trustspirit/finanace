@@ -39,10 +39,22 @@ function SortIcon({
   sortKey: SortKey;
   sortDir: SortDir;
 }) {
-  if (sortKey !== columnKey)
-    return <span className="text-gray-300 ml-1">&#8597;</span>;
+  const active = sortKey === columnKey;
   return (
-    <span className="ml-1">{sortDir === "asc" ? "\u25B2" : "\u25BC"}</span>
+    <svg
+      className={`inline-block w-3.5 h-3.5 ml-0.5 -mt-0.5 ${active ? "text-gray-700" : "text-gray-300"}`}
+      viewBox="0 0 16 16"
+      fill="currentColor"
+    >
+      <path
+        d="M8 4l3 4H5l3-4z"
+        opacity={active && sortDir === "desc" ? 0.2 : 1}
+      />
+      <path
+        d="M8 12l3-4H5l3 4z"
+        opacity={active && sortDir === "asc" ? 0.2 : 1}
+      />
+    </svg>
   );
 }
 
@@ -63,7 +75,8 @@ export default function AdminRequestsPage() {
 
   const {
     data,
-    isLoading: loading,
+    isLoading,
+    isFetching,
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
@@ -199,7 +212,7 @@ export default function AdminRequestsPage() {
         )}
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <Spinner />
       ) : (
         <>
@@ -260,7 +273,7 @@ export default function AdminRequestsPage() {
                       <th className="text-center px-4 py-3 font-medium text-gray-600"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
+                  <tbody className={`divide-y transition-opacity ${isFetching && !isFetchingNextPage ? "opacity-40" : ""}`}>
                     {accessible.map((req) => (
                       <tr key={req.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
@@ -362,7 +375,7 @@ export default function AdminRequestsPage() {
               </select>
             </div>
 
-            <div className="space-y-3">
+            <div className={`space-y-3 transition-opacity ${isFetching && !isFetchingNextPage ? "opacity-40" : ""}`}>
               {accessible.map((req) => (
                 <Link
                   key={req.id}
