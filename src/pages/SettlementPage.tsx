@@ -7,10 +7,12 @@ import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
 import { PaymentRequest, AppUser } from '../types'
 import { canApproveCommittee } from '../lib/roles'
-import { useApprovedRequests, useRequests } from '../hooks/queries/useRequests'
+import { useApprovedRequests } from '../hooks/queries/useRequests'
 import { useCreateSettlement } from '../hooks/queries/useSettlements'
+import { useBudgetUsage } from '../hooks/useBudgetUsage'
 import Layout from '../components/Layout'
 import Spinner from '../components/Spinner'
+import BudgetWarningBanner from '../components/BudgetWarningBanner'
 
 export default function SettlementPage() {
   const { t } = useTranslation()
@@ -23,19 +25,8 @@ export default function SettlementPage() {
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null)
 
   const { data: allRequests = [], isLoading: loading } = useApprovedRequests(currentProject?.id)
-  const { data: allProjectRequests = [] } = useRequests(currentProject?.id)
   const createSettlementMutation = useCreateSettlement()
-
-  const budgetUsage = useMemo(() => {
-    const totalBudget = currentProject?.budgetConfig?.totalBudget || 0
-    if (totalBudget <= 0) return null
-    const usedAmount = allProjectRequests
-      .filter(r => r.status === 'approved' || r.status === 'settled')
-      .reduce((sum, r) => sum + r.totalAmount, 0)
-    const percent = Math.round((usedAmount / totalBudget) * 100)
-    const warningThreshold = currentProject?.budgetWarningThreshold ?? 85
-    return { percent, warningThreshold, exceeded: percent >= 100, warning: percent >= warningThreshold }
-  }, [allProjectRequests, currentProject])
+  const budgetUsage = useBudgetUsage()
 
   // Role-based filtering stays client-side:
   const requests = useMemo(
@@ -177,13 +168,7 @@ export default function SettlementPage() {
         </button>
       </div>
 
-      {budgetUsage?.warning && (
-        <div className={`rounded-lg p-4 mb-4 text-sm ${budgetUsage.exceeded ? 'bg-red-50 border border-red-300 text-red-700' : 'bg-orange-50 border border-orange-300 text-orange-700'}`}>
-          {budgetUsage.exceeded
-            ? t('budget.exceeded', { percent: budgetUsage.percent })
-            : t('budget.warning', { percent: budgetUsage.percent, threshold: budgetUsage.warningThreshold })}
-        </div>
-      )}
+      <BudgetWarningBanner budgetUsage={budgetUsage} className="mb-4" />
 
       {selected.size > 0 && (
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4 text-sm">

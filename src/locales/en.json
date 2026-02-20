@@ -263,8 +263,7 @@
     "warning": "{{percent}}% of the budget has been used. (Warning threshold: {{threshold}}%)",
     "exceeded": "Budget exceeded! Currently at {{percent}}% usage.",
     "warningThreshold": "Budget Warning Threshold (%)",
-    "warningThresholdHint": "A warning will be shown when budget usage exceeds this percentage.",
-    "proceedAnyway": "Proceed anyway"
+    "warningThresholdHint": "A warning will be shown when budget usage exceeds this percentage."
   },
   "budgetCode": {
     "select": "Select budget code",

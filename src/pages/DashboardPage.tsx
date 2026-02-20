@@ -5,7 +5,9 @@ import { useProject } from '../contexts/ProjectContext'
 import { UNIQUE_BUDGET_CODES } from '../constants/budgetCodes'
 import Layout from '../components/Layout'
 import Spinner from '../components/Spinner'
+import BudgetWarningBanner from '../components/BudgetWarningBanner'
 import { useRequests } from '../hooks/queries/useRequests'
+import { useBudgetUsage } from '../hooks/useBudgetUsage'
 import { useUpdateProject } from '../hooks/queries/useProjects'
 
 interface BudgetConfig {
@@ -44,6 +46,7 @@ export default function DashboardPage() {
 
   const { data: requests = [], isLoading: loading, error } = useRequests(currentProject?.id)
   const updateProject = useUpdateProject()
+  const budgetUsage = useBudgetUsage()
 
   const stats = useMemo(() => {
     if (requests.length === 0) return null
@@ -133,12 +136,12 @@ export default function DashboardPage() {
 
   const remainingBudget = budget.totalBudget - stats.approvedAmount
   const usagePercent = budget.totalBudget > 0 ? Math.round((stats.approvedAmount / budget.totalBudget) * 100) : 0
-  const warningThreshold = currentProject?.budgetWarningThreshold ?? 85
-  const showBudgetWarning = budget.totalBudget > 0 && usagePercent >= warningThreshold
 
   return (
     <Layout>
       <h2 className="text-xl font-bold mb-6">{t('dashboard.title')}</h2>
+
+      <BudgetWarningBanner budgetUsage={budgetUsage} className="mb-6" />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -215,14 +218,6 @@ export default function DashboardPage() {
             )
           })()}
       </div>
-
-      {showBudgetWarning && (
-        <div className={`rounded-lg p-4 mb-6 text-sm ${usagePercent >= 100 ? 'bg-red-50 border border-red-300 text-red-700' : 'bg-orange-50 border border-orange-300 text-orange-700'}`}>
-          {usagePercent >= 100
-            ? t('budget.exceeded', { percent: usagePercent })
-            : t('budget.warning', { percent: usagePercent, threshold: warningThreshold })}
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* By Committee */}

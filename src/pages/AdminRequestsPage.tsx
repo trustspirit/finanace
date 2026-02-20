@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
 import { RequestStatus } from '../types'
+import { useBudgetUsage } from '../hooks/useBudgetUsage'
+import BudgetWarningBanner from '../components/BudgetWarningBanner'
 import Layout from '../components/Layout'
 import StatusBadge from '../components/StatusBadge'
 import SignaturePad from '../components/SignaturePad'
@@ -113,16 +115,7 @@ export default function AdminRequestsPage() {
 
   const threshold = currentProject?.directorApprovalThreshold ?? DEFAULT_APPROVAL_THRESHOLD
 
-  const budgetUsage = useMemo(() => {
-    const totalBudget = currentProject?.budgetConfig?.totalBudget || 0
-    if (totalBudget <= 0) return null
-    const usedAmount = requests
-      .filter(r => r.status === 'approved' || r.status === 'settled')
-      .reduce((sum, r) => sum + r.totalAmount, 0)
-    const percent = Math.round((usedAmount / totalBudget) * 100)
-    const warningThreshold = currentProject?.budgetWarningThreshold ?? 85
-    return { percent, warningThreshold, exceeded: percent >= 100, warning: percent >= warningThreshold }
-  }, [requests, currentProject])
+  const budgetUsage = useBudgetUsage()
 
   // Filter by committee access, exclude cancelled, then by status
   const accessible = requests.filter((r) => canApproveCommittee(role, r.committee) && r.status !== 'cancelled')
@@ -253,13 +246,7 @@ export default function AdminRequestsPage() {
           </div>
         )}
 
-        {budgetUsage?.warning && (
-          <div className={`mb-4 p-3 rounded-lg border text-sm ${budgetUsage.exceeded ? 'bg-red-50 border-red-300 text-red-700' : 'bg-orange-50 border-orange-300 text-orange-700'}`}>
-            {budgetUsage.exceeded
-              ? t('budget.exceeded', { percent: budgetUsage.percent })
-              : t('budget.warning', { percent: budgetUsage.percent, threshold: budgetUsage.warningThreshold })}
-          </div>
-        )}
+        <BudgetWarningBanner budgetUsage={budgetUsage} className="mb-4" />
 
         <p className="text-sm text-gray-500 mb-4">{t('approval.signDescription')}</p>
 
