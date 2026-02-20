@@ -22,6 +22,11 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
       - name: Install dependencies
         run: npm ci
 
@@ -52,10 +57,14 @@ jobs:
         run: npm run build
 
       - name: Deploy Hosting
-        run: npx firebase-tools deploy --only hosting --token "${{ secrets.FIREBASE_TOKEN }}"
+        run: npx firebase-tools deploy --only hosting --project finance-96f46
 
-      - name: Deploy Functions
-        run: npx firebase-tools deploy --only functions --force --token "${{ secrets.FIREBASE_TOKEN }}"
+      - name: Delete old 1st Gen functions
+        run: npx firebase-tools functions:delete uploadReceipts uploadBankBook downloadFile --project finance-96f46 --force
+        continue-on-error: true
+
+      - name: Deploy Functions (2nd Gen)
+        run: npx firebase-tools deploy --only functions --project finance-96f46 --force
 
       - name: Deploy Firestore Indexes
-        run: npx firebase-tools deploy --only firestore:indexes --token "${{ secrets.FIREBASE_TOKEN }}"
+        run: npx firebase-tools deploy --only firestore:indexes --project finance-96f46
