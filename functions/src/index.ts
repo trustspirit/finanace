@@ -1,4 +1,4 @@
-import { onCall, HttpsError } from 'firebase-functions/v2/https'
+import * as functions from 'firebase-functions/v1'
 import * as admin from 'firebase-admin'
 
 admin.initializeApp()
@@ -41,19 +41,15 @@ async function uploadFileToStorage(file: FileInput, storagePath: string): Promis
 }
 
 // 영수증 업로드
-export const uploadReceipts = onCall(
-  async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Must be logged in')
+export const uploadReceipts = functions.https.onCall(
+  async (data: { files: FileInput[]; committee: string; projectId?: string }, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Must be logged in')
     }
 
-    const { files, committee, projectId } = request.data as {
-      files: FileInput[]
-      committee: string
-      projectId?: string
-    }
+    const { files, committee, projectId } = data
     if (!files || files.length === 0) {
-      throw new HttpsError('invalid-argument', 'No files provided')
+      throw new functions.https.HttpsError('invalid-argument', 'No files provided')
     }
 
     const results: UploadResult[] = []
@@ -66,19 +62,19 @@ export const uploadReceipts = onCall(
 )
 
 // 통장사본 업로드
-export const uploadBankBook = onCall(
-  async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Must be logged in')
+export const uploadBankBook = functions.https.onCall(
+  async (data: { file: FileInput }, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Must be logged in')
     }
 
-    const { file } = request.data as { file: FileInput }
+    const { file } = data
     if (!file) {
-      throw new HttpsError('invalid-argument', 'No file provided')
+      throw new functions.https.HttpsError('invalid-argument', 'No file provided')
     }
 
     // Delete old bank book file if exists
-    const userDoc = await admin.firestore().doc(`users/${request.auth.uid}`).get()
+    const userDoc = await admin.firestore().doc(`users/${context.auth.uid}`).get()
     if (userDoc.exists) {
       const oldPath = userDoc.data()?.bankBookPath
       if (oldPath) {
@@ -90,27 +86,27 @@ export const uploadBankBook = onCall(
       }
     }
 
-    const storagePath = `bankbook/${request.auth.uid}/${Date.now()}_${file.name}`
+    const storagePath = `bankbook/${context.auth.uid}/${Date.now()}_${file.name}`
     return await uploadFileToStorage(file, storagePath)
   }
 )
 
 // 파일 다운로드 프록시 (CORS 우회)
-export const downloadFile = onCall(
-  async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Must be logged in')
+export const downloadFile = functions.https.onCall(
+  async (data: { storagePath: string }, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Must be logged in')
     }
 
-    const { storagePath } = request.data as { storagePath: string }
+    const { storagePath } = data
     if (!storagePath) {
-      throw new HttpsError('invalid-argument', 'No storage path provided')
+      throw new functions.https.HttpsError('invalid-argument', 'No storage path provided')
     }
 
     const fileRef = bucket.file(storagePath)
     const [exists] = await fileRef.exists()
     if (!exists) {
-      throw new HttpsError('not-found', 'File not found')
+      throw new functions.https.HttpsError('not-found', 'File not found')
     }
 
     const [buffer] = await fileRef.download()
