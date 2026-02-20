@@ -13,6 +13,7 @@ import {
   ApprovalModal,
   RejectionModal,
 } from "../components/AdminRequestModals";
+import Tooltip from "../components/Tooltip";
 import { useTranslation } from "react-i18next";
 import Select from "../components/Select";
 import {
@@ -227,6 +228,7 @@ export default function AdminRequestsPage() {
                         { key: null, label: t("field.committee"), align: "text-left" },
                         { key: "totalAmount" as SortKey, label: t("field.totalAmount"), align: "text-right" },
                         { key: "status" as SortKey, label: t("status.label"), align: "text-center" },
+                        { key: null, label: t("field.remarks"), align: "text-left" },
                         { key: null, label: "", align: "text-center" },
                       ] as const).map((col, i) => (
                         <th
@@ -266,12 +268,20 @@ export default function AdminRequestsPage() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           <StatusBadge status={req.status} />
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">
                           {req.approvedBy &&
                             (req.status === "approved" ||
                               req.status === "rejected") && (
-                              <p className="text-[10px] text-gray-400 mt-0.5">
-                                {req.approvedBy.name}
-                              </p>
+                              <Tooltip text={
+                                req.status === "rejected" && req.rejectionReason
+                                  ? `${req.approvedBy.name}: ${req.rejectionReason}`
+                                  : req.approvedBy.name
+                              } maxWidth="160px" />
+                            )}
+                          {req.status === "pending" &&
+                            req.totalAmount > threshold && (
+                              <Tooltip text={t("approval.directorRequired")} maxWidth="160px" className="text-orange-600" />
                             )}
                         </td>
                         <td className="px-4 py-3 text-center">
@@ -296,18 +306,6 @@ export default function AdminRequestsPage() {
                                   {t("approval.reject")}
                                 </button>
                               </div>
-                            )}
-                          {req.status === "pending" &&
-                            !canApproveRequest(
-                              role,
-                              req.committee,
-                              req.totalAmount,
-                              threshold,
-                            ) &&
-                            req.totalAmount > threshold && (
-                              <span className="text-xs text-orange-600">
-                                {t("approval.directorRequired")}
-                              </span>
                             )}
                         </td>
                       </tr>

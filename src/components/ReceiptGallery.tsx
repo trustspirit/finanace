@@ -15,27 +15,34 @@ export default function ReceiptGallery({ receipts, title }: Props) {
       <h3 className="text-sm font-medium text-gray-700 mb-3">
         {title ?? t('field.receipts')} ({receipts.length})
       </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {receipts.map((r, i) => {
-          const imgUrl = r.url || r.driveUrl
+          const fileUrl = r.url || r.driveUrl
           const thumbUrl = r.url || (r.driveFileId ? `https://drive.google.com/thumbnail?id=${r.driveFileId}&sz=w400` : undefined)
+          const isPdf = r.fileName.toLowerCase().endsWith('.pdf')
           return (
-            <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
-              <a href={imgUrl} target="_blank" rel="noopener noreferrer">
-                {thumbUrl && (
-                  <img
-                    src={thumbUrl}
-                    alt={r.fileName}
-                    className="w-full h-48 object-contain bg-gray-50"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                  />
+            <a key={i} href={fileUrl} target="_blank" rel="noopener noreferrer"
+              className="relative block border border-gray-200 rounded-lg overflow-hidden hover:border-gray-400 transition-colors">
+              <div className="aspect-[3/4] overflow-hidden bg-gray-50 relative">
+                {isPdf ? (
+                  fileUrl && (
+                    <iframe src={`${fileUrl}#toolbar=0&navpanes=0`}
+                      className="absolute top-0 left-0 border-none pointer-events-none"
+                      style={{ width: '300%', height: '300%', transform: 'scale(0.333)', transformOrigin: 'top left' }}
+                      title={r.fileName} />
+                  )
+                ) : (
+                  thumbUrl && (
+                    <img src={thumbUrl} alt={r.fileName}
+                      className="absolute inset-0 w-full h-full object-contain"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                  )
                 )}
-              </a>
-              <div className="px-3 py-2 bg-gray-50 border-t">
-                <a href={imgUrl} target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:underline truncate block">{r.fileName}</a>
               </div>
-            </div>
+              <span className="absolute bottom-0 left-0 right-0 px-2 py-1 bg-black/50 text-[10px] text-white truncate">
+                {r.fileName}
+              </span>
+            </a>
           )
         })}
       </div>

@@ -1,6 +1,14 @@
+import { httpsCallable } from 'firebase/functions'
+import * as pdfjsLib from 'pdfjs-dist'
 import { Settlement, Receipt } from '../types'
+import { functions } from './firebase'
 import i18n from './i18n'
 import { formatFirestoreDate } from './utils'
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.mjs',
+  import.meta.url,
+).toString()
 
 const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, opts)
 
@@ -8,27 +16,51 @@ function escapeHtml(str: string) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-async function preloadImages(receipts: Receipt[]) {
+async function pdfPageToDataUrl(base64Data: string): Promise<string | null> {
+  try {
+    const binary = atob(base64Data)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+
+    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise
+    const page = await pdf.getPage(1)
+    const scale = 2
+    const viewport = page.getViewport({ scale })
+    const canvas = document.createElement('canvas')
+    canvas.width = viewport.width
+    canvas.height = viewport.height
+    await page.render({ canvas, viewport } as never).promise
+    return canvas.toDataURL('image/png')
+  } catch {
+    return null
+  }
+}
+
+async function preloadReceipts(receipts: Receipt[]) {
+  const downloadFn = httpsCallable<
+    { storagePath: string },
+    { data: string; contentType: string; fileName: string }
+  >(functions, 'downloadFileV2')
+
   return Promise.all(
-    receipts.map((r) =>
-      new Promise<{ fileName: string; dataUrl: string | null }>((resolve) => {
-        const img = new Image()
-        img.crossOrigin = 'anonymous'
-        img.onload = () => {
-          try {
-            const canvas = document.createElement('canvas')
-            canvas.width = img.naturalWidth
-            canvas.height = img.naturalHeight
-            canvas.getContext('2d')?.drawImage(img, 0, 0)
-            resolve({ fileName: r.fileName, dataUrl: canvas.toDataURL('image/png') })
-          } catch {
-            resolve({ fileName: r.fileName, dataUrl: null })
-          }
+    receipts.map(async (r): Promise<{ fileName: string; dataUrl: string | null }> => {
+      try {
+        if (!r.storagePath) return { fileName: r.fileName, dataUrl: null }
+
+        const result = await downloadFn({ storagePath: r.storagePath })
+        const { data, contentType } = result.data
+        const isPdf = r.fileName.toLowerCase().endsWith('.pdf')
+
+        if (isPdf) {
+          const pageDataUrl = await pdfPageToDataUrl(data)
+          return { fileName: r.fileName, dataUrl: pageDataUrl }
         }
-        img.onerror = () => resolve({ fileName: r.fileName, dataUrl: null })
-        img.src = r.url || `https://drive.google.com/uc?export=view&id=${r.driveFileId}`
-      })
-    )
+
+        return { fileName: r.fileName, dataUrl: `data:${contentType};base64,${data}` }
+      } catch {
+        return { fileName: r.fileName, dataUrl: null }
+      }
+    })
   )
 }
 
@@ -47,15 +79,17 @@ function buildPdfStyles() {
     .total-row { font-weight: 700; background: #f9f9f9; }
     .receipt-page { page-break-before: always; }
     .receipt-page h2 { font-size: 14px; margin-bottom: 12px; }
-    .receipt-img { max-width: 100%; max-height: 700px; margin-bottom: 16px; }
-    .receipt-name { font-size: 10px; color: #666; margin-bottom: 8px; }
-    .receipt-link { font-size: 10px; color: #666; word-break: break-all; }
+    .receipt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .receipt-card { border: 1px solid #ddd; border-radius: 4px; overflow: hidden; break-inside: avoid; }
+    .receipt-card img { width: 100%; max-height: 400px; object-fit: contain; background: #f9f9f9; display: block; }
+    .receipt-name { font-size: 9px; color: #666; padding: 4px 6px; background: #f5f5f5; border-top: 1px solid #eee; }
+    .receipt-fail { padding: 30px 10px; text-align: center; background: #f9f9f9; color: #999; font-size: 11px; }
     @media print { body { padding: 10mm; } }
   `
 }
 
 export async function exportSettlementPdf(settlement: Settlement, documentNo = '', projectName = '') {
-  const images = await preloadImages(settlement.receipts)
+  const images = await preloadReceipts(settlement.receipts)
   const dateStr = formatFirestoreDate(settlement.createdAt) || new Date().toLocaleDateString('ko-KR')
 
   const html = `<!DOCTYPE html>
@@ -124,10 +158,12 @@ export async function exportSettlementPdf(settlement: Settlement, documentNo = '
   ${images.length > 0 ? `
   <div class="receipt-page">
     <h2>${t('field.receipts')}</h2>
-    ${images.map((img) => img.dataUrl
-      ? `<div><p class="receipt-name">${escapeHtml(img.fileName)}</p><img class="receipt-img" src="${img.dataUrl}" /></div>`
-      : `<div><p class="receipt-name">${escapeHtml(img.fileName)}</p><p class="receipt-link">Failed to load image.</p></div>`
-    ).join('')}
+    <div class="receipt-grid">
+      ${images.map((img) => {
+        if (!img.dataUrl) return `<div class="receipt-card"><div class="receipt-fail">Failed to load</div><p class="receipt-name">${escapeHtml(img.fileName)}</p></div>`
+        return `<div class="receipt-card"><img src="${img.dataUrl}" /><p class="receipt-name">${escapeHtml(img.fileName)}</p></div>`
+      }).join('')}
+    </div>
   </div>` : ''}
 </body></html>`
 

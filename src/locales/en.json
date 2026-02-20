@@ -93,7 +93,8 @@
     "budgetCode": "Budget Code",
     "approver": "Approver",
     "requestedBy": "Requested by",
-    "approvedBy": "Approved by"
+    "approvedBy": "Approved by",
+    "remarks": "Remarks"
   },
   "form": {
     "title": "Payment / Reimbursement Request Form",

@@ -11,6 +11,7 @@ import InfoGrid from '../components/InfoGrid'
 import ItemsTable from '../components/ItemsTable'
 import SignatureBlock from '../components/SignatureBlock'
 import FinanceVerification from '../components/FinanceVerification'
+import ReceiptGallery from '../components/ReceiptGallery'
 
 export default function SettlementReportPage() {
   const { t } = useTranslation()
@@ -39,6 +40,9 @@ export default function SettlementReportPage() {
   return (
     <Layout>
       <div className="bg-white rounded-lg shadow p-4 sm:p-6 max-w-4xl mx-auto">
+        <Link to="/admin/settlements" className="inline-block text-sm text-purple-600 hover:underline mb-4">
+          {t('settlement.backToList')}
+        </Link>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold">{t('settlement.reportTitle')}</h2>
@@ -65,21 +69,7 @@ export default function SettlementReportPage() {
 
         <ItemsTable items={settlement.items} totalAmount={settlement.totalAmount} />
 
-        {settlement.receipts.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">
-              {t('field.receipts')} ({settlement.receipts.length})
-            </h3>
-            <ul className="space-y-1">
-              {settlement.receipts.map((r, i) => (
-                <li key={i}>
-                  <a href={r.url || r.driveUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:underline">{r.fileName}</a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <ReceiptGallery receipts={settlement.receipts} />
 
         <SignatureBlock
           payeeName={settlement.payee}
@@ -88,12 +78,6 @@ export default function SettlementReportPage() {
           approverName={settlement.approvedBy?.name}
         />
         <FinanceVerification documentNo={documentNo} />
-
-        <div className="mt-6">
-          <Link to="/admin/settlements" className="text-sm text-purple-600 hover:underline">
-            {t('settlement.backToList')}
-          </Link>
-        </div>
       </div>
     </Layout>
   )

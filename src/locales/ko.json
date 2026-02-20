@@ -93,7 +93,8 @@
     "budgetCode": "예산 코드",
     "approver": "승인자",
     "requestedBy": "신청자",
-    "approvedBy": "승인자"
+    "approvedBy": "승인자",
+    "remarks": "비고"
   },
   "form": {
     "title": "지불 / 환불 신청서",

@@ -29,6 +29,7 @@ export default function RequestDetailPage() {
   return (
     <Layout>
       <div className="bg-white rounded-lg shadow p-4 sm:p-6 max-w-4xl mx-auto">
+        <Link to="/my-requests" className="inline-block text-sm text-blue-600 hover:underline mb-4">{t('common.backToList')}</Link>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold">{t('detail.title')}</h2>
@@ -128,9 +129,6 @@ export default function RequestDetailPage() {
           </div>
         )}
 
-        <div className="mt-6">
-          <Link to="/my-requests" className="text-sm text-blue-600 hover:underline">{t('common.backToList')}</Link>
-        </div>
       </div>
     </Layout>
   )
