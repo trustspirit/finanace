@@ -39,21 +39,18 @@ function SortIcon({
   sortKey: SortKey;
   sortDir: SortDir;
 }) {
-  const active = sortKey === columnKey;
+  if (sortKey !== columnKey) return null;
   return (
     <svg
-      className={`inline-block w-3.5 h-3.5 ml-0.5 -mt-0.5 ${active ? "text-gray-700" : "text-gray-300"}`}
-      viewBox="0 0 16 16"
+      className="inline-block w-3 h-3 ml-1 text-blue-600"
+      viewBox="0 0 12 12"
       fill="currentColor"
     >
-      <path
-        d="M8 4l3 4H5l3-4z"
-        opacity={active && sortDir === "desc" ? 0.2 : 1}
-      />
-      <path
-        d="M8 12l3-4H5l3 4z"
-        opacity={active && sortDir === "asc" ? 0.2 : 1}
-      />
+      {sortDir === "asc" ? (
+        <path d="M6 2l4 5H2l4-5z" />
+      ) : (
+        <path d="M6 10L2 5h8l-4 5z" />
+      )}
     </svg>
   );
 }
@@ -223,54 +220,29 @@ export default function AdminRequestsPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      <th
-                        className="text-left px-4 py-3 font-medium text-gray-600 cursor-pointer select-none hover:text-gray-900"
-                        onClick={() => handleSort("date")}
-                      >
-                        {t("field.date")}
-                        <SortIcon
-                          columnKey="date"
-                          sortKey={sortKey}
-                          sortDir={sortDir}
-                        />
-                      </th>
-                      <th
-                        className="text-left px-4 py-3 font-medium text-gray-600 cursor-pointer select-none hover:text-gray-900"
-                        onClick={() => handleSort("payee")}
-                      >
-                        {t("field.payee")}
-                        <SortIcon
-                          columnKey="payee"
-                          sortKey={sortKey}
-                          sortDir={sortDir}
-                        />
-                      </th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">
-                        {t("field.committee")}
-                      </th>
-                      <th
-                        className="text-right px-4 py-3 font-medium text-gray-600 cursor-pointer select-none hover:text-gray-900"
-                        onClick={() => handleSort("totalAmount")}
-                      >
-                        {t("field.totalAmount")}
-                        <SortIcon
-                          columnKey="totalAmount"
-                          sortKey={sortKey}
-                          sortDir={sortDir}
-                        />
-                      </th>
-                      <th
-                        className="text-center px-4 py-3 font-medium text-gray-600 cursor-pointer select-none hover:text-gray-900"
-                        onClick={() => handleSort("status")}
-                      >
-                        {t("status.label")}
-                        <SortIcon
-                          columnKey="status"
-                          sortKey={sortKey}
-                          sortDir={sortDir}
-                        />
-                      </th>
-                      <th className="text-center px-4 py-3 font-medium text-gray-600"></th>
+                      {([
+                        { key: "date" as SortKey, label: t("field.date"), align: "text-left" },
+                        { key: "payee" as SortKey, label: t("field.payee"), align: "text-left" },
+                        { key: null, label: t("field.committee"), align: "text-left" },
+                        { key: "totalAmount" as SortKey, label: t("field.totalAmount"), align: "text-right" },
+                        { key: "status" as SortKey, label: t("status.label"), align: "text-center" },
+                        { key: null, label: "", align: "text-center" },
+                      ] as const).map((col, i) => (
+                        <th
+                          key={i}
+                          className={`${col.align} px-4 py-3 font-medium select-none ${
+                            col.key
+                              ? `cursor-pointer hover:text-gray-900 ${sortKey === col.key ? "text-blue-600" : "text-gray-600"}`
+                              : "text-gray-600"
+                          }`}
+                          onClick={col.key ? () => handleSort(col.key!) : undefined}
+                        >
+                          {col.label}
+                          {col.key && (
+                            <SortIcon columnKey={col.key} sortKey={sortKey} sortDir={sortDir} />
+                          )}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className={`divide-y transition-opacity ${isFetching && !isFetchingNextPage ? "opacity-40" : ""}`}>

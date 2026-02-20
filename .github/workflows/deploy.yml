@@ -57,8 +57,7 @@ jobs:
       - name: Deploy Functions
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp-sa-key.json
-        run: npx firebase-tools deploy --only functions --project finance-96f46 --force
-        timeout-minutes: 10
+        run: npx firebase-tools deploy --only functions:uploadReceiptsV2,functions:uploadBankBookV2,functions:downloadFileV2 --project finance-96f46 --force
 
       - name: Deploy Firestore Indexes
         env:

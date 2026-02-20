@@ -3,6 +3,7 @@ import {
   useInfiniteQuery,
   useMutation,
   useQueryClient,
+  keepPreviousData,
 } from "@tanstack/react-query";
 import {
   collection,
@@ -120,7 +121,7 @@ export function useInfiniteRequests(
     initialPageParam: null as QueryDocumentSnapshot<DocumentData> | null,
     getNextPageParam: (lastPage) =>
       lastPage.items.length < PAGE_SIZE ? undefined : lastPage.lastDoc,
-
+    placeholderData: keepPreviousData,
     enabled: !!projectId,
   });
 }
