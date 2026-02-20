@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.downloadFile = exports.uploadBankBook = exports.uploadReceipts = void 0;
-const functions = __importStar(require("firebase-functions"));
+const https_1 = require("firebase-functions/v2/https");
 const admin = __importStar(require("firebase-admin"));
 admin.initializeApp();
 const STORAGE_BUCKET = 'finance-96f46.firebasestorage.app';
@@ -59,13 +59,13 @@ async function uploadFileToStorage(file, storagePath) {
     };
 }
 // 영수증 업로드
-exports.uploadReceipts = functions.https.onCall(async (data, context) => {
-    if (!context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
+exports.uploadReceipts = (0, https_1.onCall)(async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'Must be logged in');
     }
-    const { files, committee, projectId } = data;
+    const { files, committee, projectId } = request.data;
     if (!files || files.length === 0) {
-        throw new functions.https.HttpsError('invalid-argument', 'No files provided');
+        throw new https_1.HttpsError('invalid-argument', 'No files provided');
     }
     const results = [];
     for (const file of files) {
@@ -75,16 +75,16 @@ exports.uploadReceipts = functions.https.onCall(async (data, context) => {
     return results;
 });
 // 통장사본 업로드
-exports.uploadBankBook = functions.https.onCall(async (data, context) => {
-    if (!context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
+exports.uploadBankBook = (0, https_1.onCall)(async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'Must be logged in');
     }
-    const { file } = data;
+    const { file } = request.data;
     if (!file) {
-        throw new functions.https.HttpsError('invalid-argument', 'No file provided');
+        throw new https_1.HttpsError('invalid-argument', 'No file provided');
     }
     // Delete old bank book file if exists
-    const userDoc = await admin.firestore().doc(`users/${context.auth.uid}`).get();
+    const userDoc = await admin.firestore().doc(`users/${request.auth.uid}`).get();
     if (userDoc.exists) {
         const oldPath = userDoc.data()?.bankBookPath;
         if (oldPath) {
@@ -96,22 +96,22 @@ exports.uploadBankBook = functions.https.onCall(async (data, context) => {
             }
         }
     }
-    const storagePath = `bankbook/${context.auth.uid}/${Date.now()}_${file.name}`;
+    const storagePath = `bankbook/${request.auth.uid}/${Date.now()}_${file.name}`;
     return await uploadFileToStorage(file, storagePath);
 });
 // 파일 다운로드 프록시 (CORS 우회)
-exports.downloadFile = functions.https.onCall(async (data, context) => {
-    if (!context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
+exports.downloadFile = (0, https_1.onCall)(async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'Must be logged in');
     }
-    const { storagePath } = data;
+    const { storagePath } = request.data;
     if (!storagePath) {
-        throw new functions.https.HttpsError('invalid-argument', 'No storage path provided');
+        throw new https_1.HttpsError('invalid-argument', 'No storage path provided');
     }
     const fileRef = bucket.file(storagePath);
     const [exists] = await fileRef.exists();
     if (!exists) {
-        throw new functions.https.HttpsError('not-found', 'File not found');
+        throw new https_1.HttpsError('not-found', 'File not found');
     }
     const [buffer] = await fileRef.download();
     const [metadata] = await fileRef.getMetadata();
