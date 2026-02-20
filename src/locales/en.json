@@ -13,7 +13,8 @@
     "userManagement": "Users",
     "settings": "Settings",
     "logout": "Logout",
-    "management": "Management"
+    "management": "Management",
+    "requests": "Requests"
   },
   "auth": {
     "loginTitle": "Payment / Reimbursement Request",

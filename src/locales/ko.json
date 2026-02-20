@@ -13,7 +13,8 @@
     "userManagement": "사용자 관리",
     "settings": "설정",
     "logout": "로그아웃",
-    "management": "관리"
+    "management": "관리",
+    "requests": "신청서"
   },
   "auth": {
     "loginTitle": "지불 / 환불 신청서",
