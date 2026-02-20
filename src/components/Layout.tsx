@@ -174,7 +174,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Desktop Nav */}
-            <div className="hidden lg:flex items-center gap-1 overflow-x-auto">
+            <div className="hidden lg:flex items-center gap-1">
               {userItems.map((item) => (
                 <Link
                   key={item.to}
