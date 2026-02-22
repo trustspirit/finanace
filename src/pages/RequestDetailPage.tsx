@@ -7,7 +7,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { useUser } from '../hooks/queries/useUsers'
 import { useBudgetUsage } from '../hooks/useBudgetUsage'
 import { useTranslation } from 'react-i18next'
-import { canReviewCommittee, canFinalApproveCommittee, canFinalApproveRequest, DEFAULT_APPROVAL_THRESHOLD } from '../lib/roles'
+import { canReviewCommittee, canFinalApproveCommittee, canFinalApproveRequest, canApproveDirectorRequest, DEFAULT_APPROVAL_THRESHOLD } from '../lib/roles'
 import Layout from '../components/Layout'
 import StatusBadge from '../components/StatusBadge'
 import Spinner from '../components/Spinner'
@@ -99,16 +99,22 @@ export default function RequestDetailPage() {
   const isSelf = request?.requestedBy.uid === user?.uid
   const bankBookUrl = requester?.bankBookUrl || requester?.bankBookDriveUrl
 
+  // Director-filed request: only executive/admin can approve
+  const isDirectorRequest = requester?.role === 'session_director' || requester?.role === 'logistic_admin'
+
   // Review action (pending → reviewed)
   const canDoReview = request?.status === 'pending' && !isSelf && canReviewCommittee(role, request.committee)
 
   // Approve action (reviewed → approved)
-  const canDoApprove = request?.status === 'reviewed' && !isSelf && canFinalApproveRequest(role, request.committee, request.totalAmount, threshold)
+  const canDoApprove = request?.status === 'reviewed' && !isSelf
+    && canFinalApproveRequest(role, request.committee, request.totalAmount, threshold)
+    && (!isDirectorRequest || canApproveDirectorRequest(role))
 
   // Reject action (pending or reviewed) — rejection doesn't require amount threshold
   const canDoReject =
     (request?.status === 'pending' && !isSelf && canReviewCommittee(role, request.committee)) ||
-    (request?.status === 'reviewed' && !isSelf && canFinalApproveCommittee(role, request.committee))
+    (request?.status === 'reviewed' && !isSelf && canFinalApproveCommittee(role, request.committee)
+      && (!isDirectorRequest || canApproveDirectorRequest(role)))
 
   const handleReview = () => {
     if (!user || !appUser || !request) return

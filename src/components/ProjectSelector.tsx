@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useTranslation } from 'react-i18next'
 import { FolderIcon, ChevronDownIcon } from './Icons'
@@ -6,6 +7,8 @@ import { FolderIcon, ChevronDownIcon } from './Icons'
 export default function ProjectSelector() {
   const { t } = useTranslation()
   const { currentProject, projects, setCurrentProject } = useProject()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -36,7 +39,19 @@ export default function ProjectSelector() {
           {projects.map((p) => (
             <button
               key={p.id}
-              onClick={() => { setCurrentProject(p); setOpen(false) }}
+              onClick={() => {
+                setCurrentProject(p)
+                setOpen(false)
+                // Navigate away from detail pages that belong to the old project
+                const path = location.pathname
+                if (path.match(/^\/(request|admin\/settlement)\/[^/]+$/)) {
+                  if (path.startsWith('/admin/settlement/')) {
+                    navigate('/admin/settlements')
+                  } else {
+                    navigate('/my-requests')
+                  }
+                }
+              }}
               className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
                 currentProject?.id === p.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
               }`}

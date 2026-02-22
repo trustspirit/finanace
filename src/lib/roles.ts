@@ -39,6 +39,11 @@ export function canFinalApproveRequest(role: UserRole, committee: Committee, amo
   return true
 }
 
+/** Can final-approve a request filed by a director (session_director/logistic_admin) — only executive/admin */
+export function canApproveDirectorRequest(role: UserRole): boolean {
+  return role === 'admin' || role === 'executive'
+}
+
 /** Can force-reject approved requests (finance_prep, admin only) */
 export function canForceReject(role: UserRole): boolean {
   return role === 'finance_prep' || role === 'admin'

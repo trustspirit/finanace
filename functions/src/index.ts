@@ -21,6 +21,7 @@ function createTransporter() {
   })
 }
 
+const APP_URL = 'https://finance-96f46.web.app'
 const STORAGE_BUCKET = 'finance-96f46.firebasestorage.app'
 const bucket = admin.storage().bucket(STORAGE_BUCKET)
 
@@ -201,7 +202,7 @@ export const cleanupDeletedProjects = onSchedule('every 24 hours', async () => {
 // --- Email Notification Functions ---
 
 const COMMITTEE_LABELS: Record<string, string> = {
-  operations: '작전위원회',
+  operations: '운영위원회',
   preparation: '준비위원회',
 }
 
@@ -233,8 +234,8 @@ export const onRequestCreated = onDocumentCreated(
     // Find finance reviewers for this committee
     const db = admin.firestore()
     const reviewerRoles = committee === 'operations'
-      ? ['finance_ops', 'finance_prep', 'admin']
-      : ['finance_prep', 'admin']
+      ? ['finance_ops', 'finance_prep']
+      : ['finance_prep']
 
     const usersSnapshot = await db.collection('users')
       .where('role', 'in', reviewerRoles)
@@ -266,7 +267,7 @@ export const onRequestCreated = onDocumentCreated(
                 <tr><td style="padding: 8px 0; color: #6b7280;">신청자</td><td style="padding: 8px 0;">${payee} (${requestedBy.name})</td></tr>
                 <tr><td style="padding: 8px 0; color: #6b7280;">신청 금액</td><td style="padding: 8px 0; font-weight: 600;">${formatCurrency(totalAmount)}</td></tr>
               </table>
-              <p style="color: #6b7280; font-size: 14px;">앱에 접속하여 신청서를 검토해 주세요.</p>
+              <p style="margin-top: 20px;"><a href="${APP_URL}/admin/requests" style="display: inline-block; padding: 10px 20px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-size: 14px;">신청서 검토하기</a></p>
             </div>
           `,
         })
@@ -278,7 +279,7 @@ export const onRequestCreated = onDocumentCreated(
   }
 )
 
-function buildStatusChangeEmail(data: Record<string, unknown>, newStatus: string): { subject: string; html: string } {
+function buildStatusChangeEmail(data: Record<string, unknown>, newStatus: string, requestId?: string): { subject: string; html: string } {
   const totalAmount = data.totalAmount as number
   const approvedBy = data.approvedBy as { name: string } | null
   const rejectionReason = data.rejectionReason as string | null
@@ -295,7 +296,7 @@ function buildStatusChangeEmail(data: Record<string, unknown>, newStatus: string
             <tr><td style="padding: 8px 0; color: #6b7280;">승인자</td><td style="padding: 8px 0;">${approvedBy?.name || '-'}</td></tr>
             <tr><td style="padding: 8px 0; color: #6b7280;">승인 일시</td><td style="padding: 8px 0;">${formatDate(approvedAt)}</td></tr>
           </table>
-          <p style="color: #6b7280; font-size: 14px;">앱에서 상세 내역을 확인하세요.</p>
+          <p style="margin-top: 20px;"><a href="${APP_URL}/request/${requestId || ''}" style="display: inline-block; padding: 10px 20px; background-color: #16a34a; color: white; text-decoration: none; border-radius: 6px; font-size: 14px;">상세 내역 확인하기</a></p>
         </div>
       `,
     }
@@ -311,7 +312,7 @@ function buildStatusChangeEmail(data: Record<string, unknown>, newStatus: string
             <tr><td style="padding: 8px 0; color: #6b7280;">신청 금액</td><td style="padding: 8px 0; font-weight: 600;">${formatCurrency(totalAmount)}</td></tr>
             <tr><td style="padding: 8px 0; color: #6b7280;">반려 사유</td><td style="padding: 8px 0; color: #dc2626;">${rejectionReason || '-'}</td></tr>
           </table>
-          <p style="color: #6b7280; font-size: 14px;">반려 사유를 확인하시고 필요시 재신청해 주세요.</p>
+          <p style="margin-top: 20px;"><a href="${APP_URL}/request/${requestId || ''}" style="display: inline-block; padding: 10px 20px; background-color: #dc2626; color: white; text-decoration: none; border-radius: 6px; font-size: 14px;">상세 내역 확인하기</a></p>
         </div>
       `,
     }
@@ -327,7 +328,7 @@ function buildStatusChangeEmail(data: Record<string, unknown>, newStatus: string
           <tr><td style="padding: 8px 0; color: #6b7280;">신청 금액</td><td style="padding: 8px 0; font-weight: 600;">${formatCurrency(totalAmount)}</td></tr>
           <tr><td style="padding: 8px 0; color: #6b7280;">반려 사유</td><td style="padding: 8px 0; color: #ea580c;">${rejectionReason || '-'}</td></tr>
         </table>
-        <p style="color: #6b7280; font-size: 14px;">반려 사유를 확인하시고 필요시 재신청해 주세요.</p>
+        <p style="margin-top: 20px;"><a href="${APP_URL}/request/${requestId || ''}" style="display: inline-block; padding: 10px 20px; background-color: #ea580c; color: white; text-decoration: none; border-radius: 6px; font-size: 14px;">상세 내역 확인하기</a></p>
       </div>
     `,
   }
@@ -355,12 +356,24 @@ export const onRequestStatusChange = onDocumentUpdated(
       const committee = after.committee as string
       const totalAmount = after.totalAmount as number
       const payee = after.payee as string
+      const requestedByUid = (after.requestedBy as { uid: string }).uid
       const committeeLabel = COMMITTEE_LABELS[committee] || committee
+      const reqId = event.params?.requestId || ''
 
-      // 해당 위원회 승인자 조회
-      const approverRoles = committee === 'operations'
-        ? ['approver_ops', 'session_director', 'executive', 'admin']
-        : ['approver_prep', 'logistic_admin', 'executive', 'admin']
+      // 신청자의 역할 확인 (위원장이 신청한 건은 executive만 승인 가능)
+      const requesterSnap = await db.doc(`users/${requestedByUid}`).get()
+      const requesterRole = requesterSnap.exists ? requesterSnap.data()?.role as string : 'user'
+      const isDirectorRequest = requesterRole === 'session_director' || requesterRole === 'logistic_admin'
+
+      let approverRoles: string[]
+      if (isDirectorRequest) {
+        // 위원장이 신청한 건 → executive만 승인 가능
+        approverRoles = ['executive']
+      } else {
+        approverRoles = committee === 'operations'
+          ? ['approver_ops', 'session_director', 'executive']
+          : ['approver_prep', 'logistic_admin', 'executive']
+      }
 
       const usersSnapshot = await db.collection('users')
         .where('role', 'in', approverRoles)
@@ -384,7 +397,7 @@ export const onRequestStatusChange = onDocumentUpdated(
                   <tr><td style="padding: 8px 0; color: #6b7280;">신청자</td><td style="padding: 8px 0;">${payee}</td></tr>
                   <tr><td style="padding: 8px 0; color: #6b7280;">신청 금액</td><td style="padding: 8px 0; font-weight: 600;">${formatCurrency(totalAmount)}</td></tr>
                 </table>
-                <p style="color: #6b7280; font-size: 14px;">앱에 접속하여 신청서를 승인해 주세요.</p>
+                <p style="margin-top: 20px;"><a href="${APP_URL}/request/${reqId}" style="display: inline-block; padding: 10px 20px; background-color: #16a34a; color: white; text-decoration: none; border-radius: 6px; font-size: 14px;">신청서 승인하기</a></p>
               </div>
             `,
           })
@@ -410,7 +423,8 @@ export const onRequestStatusChange = onDocumentUpdated(
       return
     }
 
-    const { subject, html } = buildStatusChangeEmail(after, newStatus)
+    const requestId = event.params?.requestId || ''
+    const { subject, html } = buildStatusChangeEmail(after, newStatus, requestId)
 
     try {
       await transporter.sendMail({
@@ -440,7 +454,7 @@ function buildWeeklyDigestEmail(userName: string, sections: { label: string; cou
         <h2 style="color: #2563eb; margin-bottom: 16px;">주간 처리 현황</h2>
         <p style="margin-bottom: 16px;">${userName}님, 처리가 필요한 건이 있습니다.</p>
         <ul style="margin-bottom: 20px; padding-left: 20px;">${sectionHtml}</ul>
-        <p style="color: #6b7280; font-size: 14px;">앱에 접속하여 확인해 주세요.</p>
+        <p style="margin-top: 20px;"><a href="${APP_URL}/admin/requests" style="display: inline-block; padding: 10px 20px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-size: 14px;">확인하기</a></p>
       </div>
     `,
   }
@@ -457,7 +471,7 @@ export const weeklyApproverDigest = onSchedule(
     const db = admin.firestore()
 
     // 관련 역할 사용자 조회
-    const relevantRoles = ['finance_ops', 'finance_prep', 'approver_ops', 'approver_prep', 'session_director', 'logistic_admin', 'executive', 'admin']
+    const relevantRoles = ['finance_ops', 'finance_prep', 'approver_ops', 'approver_prep', 'session_director', 'logistic_admin', 'executive']
     const usersSnapshot = await db.collection('users')
       .where('role', 'in', relevantRoles)
       .get()

@@ -92,13 +92,17 @@ export default function AdminRequestsPage() {
         )
       : allRequests.filter((r) => canSeeCommitteeRequests(role, r.committee));
     // Stable secondary sort by createdAt within same primary sort value
+    const toTime = (d: unknown): number => {
+      if (!d) return 0;
+      if (d instanceof Date) return d.getTime();
+      if (typeof d === "object" && d !== null && "toDate" in d) return (d as { toDate: () => Date }).toDate().getTime();
+      return 0;
+    };
     return filtered.slice().sort((a, b) => {
       const aKey = String((a as unknown as Record<string, unknown>)[sortKey] ?? "");
       const bKey = String((b as unknown as Record<string, unknown>)[sortKey] ?? "");
       if (aKey !== bKey) return 0; // already sorted by Firestore
-      const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : 0;
-      const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : 0;
-      return sortDir === "desc" ? bTime - aTime : aTime - bTime;
+      return sortDir === "desc" ? toTime(b.createdAt) - toTime(a.createdAt) : toTime(a.createdAt) - toTime(b.createdAt);
     });
   }, [allRequests, filter, role, sortKey, sortDir]);
 
