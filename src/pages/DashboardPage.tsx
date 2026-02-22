@@ -103,7 +103,7 @@ export default function DashboardPage() {
   }, [requests]);
 
   const canEditBudget =
-    appUser?.role === "admin" || appUser?.role === "finance_prep";
+    appUser?.role === "admin" || appUser?.role === "super_admin" || appUser?.role === "finance_prep";
 
   if (loading)
     return (

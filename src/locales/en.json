@@ -56,7 +56,8 @@
     "session_director": "Session Director",
     "logistic_admin": "Logistical Director",
     "executive": "Executive",
-    "admin": "Admin"
+    "admin": "Admin",
+    "super_admin": "Super Admin"
   },
   "status": {
     "label": "Status",

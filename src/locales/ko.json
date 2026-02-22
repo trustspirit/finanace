@@ -56,7 +56,8 @@
     "session_director": "운영 위원장",
     "logistic_admin": "준비 위원장",
     "executive": "대회장",
-    "admin": "관리자"
+    "admin": "관리자",
+    "super_admin": "최고 관리자"
   },
   "status": {
     "label": "상태",

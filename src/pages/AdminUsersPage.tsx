@@ -117,6 +117,7 @@ export default function AdminUsersPage() {
   const [successUid, setSuccessUid] = useState<string | null>(null)
 
   const ROLE_PRIORITY: Record<UserRole, number> = {
+    super_admin: -1,
     admin: 0,
     executive: 1,
     finance_prep: 2,
@@ -134,7 +135,7 @@ export default function AdminUsersPage() {
     return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', 'ko')
   })
 
-  const isAdmin = currentUser?.role === 'admin'
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin'
 
   const ROLE_LABELS: Record<UserRole, string> = {
     user: t('role.user'),
@@ -146,6 +147,7 @@ export default function AdminUsersPage() {
     logistic_admin: t('role.logistic_admin'),
     executive: t('role.executive'),
     admin: t('role.admin'),
+    super_admin: t('role.super_admin'),
   }
 
   const handleRoleChange = (uid: string, newRole: UserRole) => {
@@ -219,23 +221,29 @@ export default function AdminUsersPage() {
                       <td className="px-4 py-3 text-gray-500">{u.phone || '-'}</td>
                       {isAdmin && (
                         <td className="px-4 py-3 text-center">
-                          <Select
-                            value={u.role}
-                            disabled={u.uid === currentUser?.uid}
-                            onChange={(e) => handleRoleChange(u.uid, e.target.value as UserRole)}
-                          >
-                            <option value="user">{t('role.user')}</option>
-                            <option value="finance_ops">{t('role.finance_ops')}</option>
-                            <option value="approver_ops">{t('role.approver_ops')}</option>
-                            <option value="finance_prep">{t('role.finance_prep')}</option>
-                            <option value="approver_prep">{t('role.approver_prep')}</option>
-                            <option value="session_director">{t('role.session_director')}</option>
-                            <option value="logistic_admin">{t('role.logistic_admin')}</option>
-                            <option value="executive">{t('role.executive')}</option>
-                            <option value="admin">{t('role.admin')}</option>
-                          </Select>
-                          {successUid === u.uid && (
-                            <p className="text-xs text-green-600 mt-1">{t('users.roleChanged')}</p>
+                          {u.role === 'super_admin' ? (
+                            <span className="text-xs text-gray-400">{t('role.super_admin')}</span>
+                          ) : (
+                            <>
+                              <Select
+                                value={u.role}
+                                disabled={u.uid === currentUser?.uid}
+                                onChange={(e) => handleRoleChange(u.uid, e.target.value as UserRole)}
+                              >
+                                <option value="user">{t('role.user')}</option>
+                                <option value="finance_ops">{t('role.finance_ops')}</option>
+                                <option value="approver_ops">{t('role.approver_ops')}</option>
+                                <option value="finance_prep">{t('role.finance_prep')}</option>
+                                <option value="approver_prep">{t('role.approver_prep')}</option>
+                                <option value="session_director">{t('role.session_director')}</option>
+                                <option value="logistic_admin">{t('role.logistic_admin')}</option>
+                                <option value="executive">{t('role.executive')}</option>
+                                <option value="admin">{t('role.admin')}</option>
+                              </Select>
+                              {successUid === u.uid && (
+                                <p className="text-xs text-green-600 mt-1">{t('users.roleChanged')}</p>
+                              )}
+                            </>
                           )}
                         </td>
                       )}
@@ -243,7 +251,7 @@ export default function AdminUsersPage() {
                         <td className="px-4 py-3 text-center">
                           <button
                             onClick={() => handleDeleteUser(u.uid)}
-                            disabled={u.uid === currentUser?.uid}
+                            disabled={u.uid === currentUser?.uid || u.role === 'super_admin'}
                             className="p-1 text-gray-400 hover:text-red-500 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
                             title={t('users.deleteUser')}
                           >
@@ -276,26 +284,32 @@ export default function AdminUsersPage() {
                 </div>
                 {isAdmin ? (
                   <div>
-                    <Select
-                      value={u.role}
-                      disabled={u.uid === currentUser?.uid}
-                      onChange={(e) => handleRoleChange(u.uid, e.target.value as UserRole)}
-                      selectClassName="w-full"
-                    >
-                      <option value="user">{t('role.user')}</option>
-                      <option value="finance_ops">{t('role.finance_ops')}</option>
-                      <option value="approver_ops">{t('role.approver_ops')}</option>
-                      <option value="finance_prep">{t('role.finance_prep')}</option>
-                      <option value="approver_prep">{t('role.approver_prep')}</option>
-                      <option value="session_director">{t('role.session_director')}</option>
-                      <option value="logistic_admin">{t('role.logistic_admin')}</option>
-                      <option value="executive">{t('role.executive')}</option>
-                      <option value="admin">{t('role.admin')}</option>
-                    </Select>
-                    {successUid === u.uid && (
-                      <p className="text-xs text-green-600 mt-1">{t('users.roleChanged')}</p>
+                    {u.role === 'super_admin' ? (
+                      <span className="text-xs text-gray-400">{t('role.super_admin')}</span>
+                    ) : (
+                      <>
+                        <Select
+                          value={u.role}
+                          disabled={u.uid === currentUser?.uid}
+                          onChange={(e) => handleRoleChange(u.uid, e.target.value as UserRole)}
+                          selectClassName="w-full"
+                        >
+                          <option value="user">{t('role.user')}</option>
+                          <option value="finance_ops">{t('role.finance_ops')}</option>
+                          <option value="approver_ops">{t('role.approver_ops')}</option>
+                          <option value="finance_prep">{t('role.finance_prep')}</option>
+                          <option value="approver_prep">{t('role.approver_prep')}</option>
+                          <option value="session_director">{t('role.session_director')}</option>
+                          <option value="logistic_admin">{t('role.logistic_admin')}</option>
+                          <option value="executive">{t('role.executive')}</option>
+                          <option value="admin">{t('role.admin')}</option>
+                        </Select>
+                        {successUid === u.uid && (
+                          <p className="text-xs text-green-600 mt-1">{t('users.roleChanged')}</p>
+                        )}
+                      </>
                     )}
-                    {u.uid !== currentUser?.uid && (
+                    {u.uid !== currentUser?.uid && u.role !== 'super_admin' && (
                       <button
                         onClick={() => handleDeleteUser(u.uid)}
                         className="mt-2 p-1 text-gray-400 hover:text-red-500 transition-colors"
