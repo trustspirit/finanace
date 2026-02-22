@@ -13,7 +13,7 @@ export default function Select({ label, wrapperClassName = '', selectClassName =
       <div className="relative">
         <select
           {...props}
-          className={`appearance-none border border-gray-300 rounded pl-3 pr-9 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-400 ${selectClassName}`}
+          className={`appearance-none w-full border border-gray-300 rounded pl-3 pr-9 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-400 ${selectClassName}`}
         >
           {children}
         </select>
