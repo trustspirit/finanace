@@ -454,12 +454,6 @@ exports.weeklyApproverDigest = (0, scheduler_1.onSchedule)({
     const approvedSnapshot = await db.collection('requests')
         .where('status', '==', 'approved')
         .get();
-    let prepApprovedUnsettledCount = 0;
-    for (const doc of approvedSnapshot.docs) {
-        const committee = doc.data().committee;
-        if (committee === 'preparation')
-            prepApprovedUnsettledCount++;
-    }
     const totalApprovedUnsettledCount = approvedSnapshot.size;
     const transporter = createTransporter();
     for (const userDoc of usersSnapshot.docs) {

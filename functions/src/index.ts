@@ -499,11 +499,6 @@ export const weeklyApproverDigest = onSchedule(
       .where('status', '==', 'approved')
       .get()
 
-    let prepApprovedUnsettledCount = 0
-    for (const doc of approvedSnapshot.docs) {
-      const committee = doc.data().committee as string
-      if (committee === 'preparation') prepApprovedUnsettledCount++
-    }
     const totalApprovedUnsettledCount = approvedSnapshot.size
 
     const transporter = createTransporter()
