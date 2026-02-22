@@ -66,7 +66,7 @@ export default function RequestDetailPage() {
     : 0
 
   const nextIdRef = useRef(nextId)
-  nextIdRef.current = nextId
+  useEffect(() => { nextIdRef.current = nextId }, [nextId])
 
   const navigateToNext = useCallback(() => {
     setSlideState('out')

@@ -24,6 +24,15 @@ export function formatFirestoreDate(date: unknown): string {
   return '-'
 }
 
+/** Firestore Timestamp → HH:MM 시간 문자열 */
+export function formatFirestoreTime(date: unknown): string {
+  if (date && typeof date === 'object' && 'toDate' in date) {
+    const d = (date as { toDate: () => Date }).toDate()
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+  return ''
+}
+
 /** 파일 유효성 검증 (허용 형식 + 용량) */
 export function validateFiles(files: File[], t?: (key: string, opts?: Record<string, unknown>) => string): { valid: File[]; errors: string[] } {
   const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'application/pdf']

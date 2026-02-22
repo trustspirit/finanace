@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useProject } from "../contexts/ProjectContext";
 import { RequestStatus } from "../types";
+import { formatFirestoreTime } from "../lib/utils";
 import Layout from "../components/Layout";
 import StatusBadge from "../components/StatusBadge";
 import Spinner from "../components/Spinner";
@@ -211,6 +212,9 @@ export default function AdminRequestsPage() {
                           >
                             {req.date}
                           </Link>
+                          {formatFirestoreTime(req.createdAt) && (
+                            <span className="ml-1.5 text-xs text-gray-400">{formatFirestoreTime(req.createdAt)}</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">{req.payee}</td>
                         <td className="px-4 py-3">
@@ -269,7 +273,7 @@ export default function AdminRequestsPage() {
                     <StatusBadge status={req.status} />
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
-                    <span>{req.date}</span>
+                    <span>{req.date}{formatFirestoreTime(req.createdAt) && <span className="ml-1 text-xs text-gray-400">{formatFirestoreTime(req.createdAt)}</span>}</span>
                     <span>{t(`committee.${req.committee}Short`)}</span>
                   </div>
                   <div className="text-right font-semibold text-gray-900">

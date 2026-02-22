@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useProject } from '../contexts/ProjectContext'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { formatFirestoreTime } from '../lib/utils'
 import { useInfiniteMyRequests, useCancelRequest } from '../hooks/queries/useRequests'
 import type { RequestStatus } from '../types'
 
@@ -98,6 +99,9 @@ export default function MyRequestsPage() {
                     <tr key={req.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <Link to={`/request/${req.id}`} className="text-blue-600 hover:underline">{req.date}</Link>
+                        {formatFirestoreTime(req.createdAt) && (
+                          <span className="ml-1.5 text-xs text-gray-400">{formatFirestoreTime(req.createdAt)}</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">{t(`committee.${req.committee}Short`)}</td>
                       <td className="px-4 py-3">{t('form.itemCount', { count: req.items.length })}</td>
@@ -130,7 +134,7 @@ export default function MyRequestsPage() {
             {requests.map((req) => (
               <Link key={req.id} to={`/request/${req.id}`} className="block bg-white rounded-lg shadow p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-blue-600">{req.date}</span>
+                  <span className="text-sm font-medium text-blue-600">{req.date}{formatFirestoreTime(req.createdAt) && <span className="ml-1 text-xs text-gray-400 font-normal">{formatFirestoreTime(req.createdAt)}</span>}</span>
                   <StatusBadge status={req.status} />
                 </div>
                 <div className="text-sm text-gray-600 mb-1">{t(`committee.${req.committee}Short`)}</div>
