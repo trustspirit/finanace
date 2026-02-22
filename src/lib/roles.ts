@@ -1,6 +1,6 @@
 import { UserRole, Committee } from '../types'
 
-/** Default amount threshold: requests above this require director/admin approval */
+/** Default amount threshold: requests above this require director/executive/admin approval */
 export const DEFAULT_APPROVAL_THRESHOLD = 600000
 
 /** Check if role has admin-level privileges (admin or super_admin) */

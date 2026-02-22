@@ -10,7 +10,6 @@ import {
   getDoc,
   doc,
   updateDoc,
-  deleteDoc,
   query,
   orderBy,
   limit,
@@ -84,10 +83,14 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: async (uid: string) => {
-      await deleteDoc(doc(db, "users", uid));
+      const { httpsCallable } = await import("firebase/functions");
+      const { functions } = await import("../../lib/firebase");
+      const deleteUserAccount = httpsCallable(functions, "deleteUserAccount");
+      await deleteUserAccount({ uid });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.root() });
     },
   });
 }

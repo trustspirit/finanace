@@ -18,7 +18,7 @@ async function fetchProjects(appUser: AppUser): Promise<Project[]> {
   if (projectIds.length === 0) return []
 
   let allProjects: Project[] = []
-  if (appUser.role === 'admin') {
+  if (appUser.role === 'admin' || appUser.role === 'super_admin') {
     const q = query(collection(db, 'projects'), where('isActive', '==', true))
     const snap = await getDocs(q)
     allProjects = snap.docs.map(d => ({ id: d.id, ...d.data() } as Project))

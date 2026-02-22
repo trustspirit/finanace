@@ -199,6 +199,57 @@ export const cleanupDeletedProjects = onSchedule('every 24 hours', async () => {
   }
 })
 
+// 사용자 삭제 (Firestore 문서 + Firebase Auth 계정)
+export const deleteUserAccount = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Must be logged in')
+  }
+
+  // 호출자가 admin 또는 super_admin인지 확인
+  const callerDoc = await admin.firestore().doc(`users/${request.auth.uid}`).get()
+  const callerRole = callerDoc.exists ? callerDoc.data()?.role : null
+  if (callerRole !== 'admin' && callerRole !== 'super_admin') {
+    throw new HttpsError('permission-denied', 'Only admin can delete users')
+  }
+
+  const { uid } = request.data as { uid: string }
+  if (!uid) {
+    throw new HttpsError('invalid-argument', 'User UID is required')
+  }
+
+  // super_admin은 삭제 불가
+  const targetDoc = await admin.firestore().doc(`users/${uid}`).get()
+  if (targetDoc.exists && targetDoc.data()?.role === 'super_admin') {
+    throw new HttpsError('permission-denied', 'Cannot delete super_admin')
+  }
+
+  // 본인 삭제 불가
+  if (uid === request.auth.uid) {
+    throw new HttpsError('permission-denied', 'Cannot delete yourself')
+  }
+
+  // Firestore 문서 삭제
+  await admin.firestore().doc(`users/${uid}`).delete()
+
+  // Firebase Auth 계정 삭제
+  try {
+    await admin.auth().deleteUser(uid)
+  } catch (error) {
+    console.warn(`Auth account deletion failed for ${uid}:`, error)
+  }
+
+  // 프로젝트 memberUids에서 제거
+  const projectsSnap = await admin.firestore().collection('projects')
+    .where('memberUids', 'array-contains', uid).get()
+  for (const projectDoc of projectsSnap.docs) {
+    const memberUids = (projectDoc.data().memberUids || []).filter((id: string) => id !== uid)
+    await projectDoc.ref.update({ memberUids })
+  }
+
+  console.log(`User ${uid} deleted by ${request.auth.uid}`)
+  return { success: true }
+})
+
 // --- Email Notification Functions ---
 
 const COMMITTEE_LABELS: Record<string, string> = {
@@ -546,8 +597,8 @@ export const weeklyApproverDigest = onSchedule(
       } else if (role === 'logistic_admin') {
         // 준비 위원장: 준비위 승인 대기
         sections.push({ label: '준비위 승인 대기', count: prepReviewedCount })
-      } else if (role === 'executive' || role === 'admin') {
-        // 대회장/관리자: 전체 승인 대기 + 미정산
+      } else if (role === 'executive') {
+        // 대회장: 전체 승인 대기 + 미정산
         sections.push({ label: '승인 대기', count: totalReviewedCount })
         sections.push({ label: '승인 미정산', count: totalApprovedUnsettledCount })
       }
